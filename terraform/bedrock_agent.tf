@@ -1,6 +1,6 @@
 # Bedrock Agent for City Facts
 resource "aws_bedrockagent_agent" "city_facts_agent" {
-  agent_name                    = "${var.project_name}-city-facts-agent"
+  agent_name                    = "${local.full_project_name}-city-facts-agent"
   agent_resource_role_arn       = aws_iam_role.bedrock_agent_role.arn
   foundation_model              = "anthropic.claude-3-haiku-20240307-v1:0"
   description                   = "Agent that provides interesting facts about cities around the world"
@@ -32,13 +32,13 @@ EOF
 
   tags = {
     Environment = "development"
-    Project     = var.project_name
+    Project     = local.full_project_name
   }
 }
 
 # IAM role for Bedrock Agent
 resource "aws_iam_role" "bedrock_agent_role" {
-  name = "${var.project_name}-bedrock-agent-role"
+  name = "${local.full_project_name}-bedrock-agent-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -56,22 +56,12 @@ resource "aws_iam_role" "bedrock_agent_role" {
 
 # IAM policy for Bedrock Agent to invoke foundation models and access knowledge base
 resource "aws_iam_role_policy" "bedrock_agent_model_policy" {
-  name = "${var.project_name}-bedrock-agent-model-policy"
+  name = "${local.full_project_name}-bedrock-agent-model-policy"
   role = aws_iam_role.bedrock_agent_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = var.knowledge_base_bucket_name == "" ? [
-      {
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeModel"
-        ]
-        Resource = [
-          "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
-        ]
-      }
-    ] : [
+    Statement = local.deploy_knowledge_base ? [
       {
         Effect = "Allow"
         Action = [
@@ -88,6 +78,16 @@ resource "aws_iam_role_policy" "bedrock_agent_model_policy" {
         ]
         Resource = [
           aws_bedrockagent_knowledge_base.city_facts_simple[0].arn
+        ]
+      }
+    ] : [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel"
+        ]
+        Resource = [
+          "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
         ]
       }
     ]

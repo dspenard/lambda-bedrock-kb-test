@@ -1,7 +1,7 @@
 # Lambda function for direct city facts (direct model access)
 resource "aws_lambda_function" "city_facts_direct" {
   filename         = "city_facts_direct.zip"
-  function_name    = "${var.project_name}-city-facts-direct"
+  function_name    = "${local.full_project_name}-city-facts-direct"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = "python3.11"
@@ -25,13 +25,20 @@ resource "aws_lambda_function" "city_facts_direct" {
 # Lambda function for city facts via Bedrock agent
 resource "aws_lambda_function" "city_facts_agent" {
   filename         = "city_facts_agent.zip"
-  function_name    = "${var.project_name}-city-facts-agent"
+  function_name    = "${local.full_project_name}-city-facts-agent"
   role            = aws_iam_role.lambda_role.arn
   handler         = "index.handler"
   runtime         = "python3.11"
   timeout         = 30
   memory_size     = 128
   publish         = false
+
+  environment {
+    variables = {
+      BEDROCK_AGENT_ID = aws_bedrockagent_agent.city_facts_agent.agent_id
+      BEDROCK_AGENT_ALIAS_ID = "TSTALIASID"
+    }
+  }
 
   # Ignore changes to code since it's managed externally
   lifecycle {
@@ -48,7 +55,7 @@ resource "aws_lambda_function" "city_facts_agent" {
 
 # IAM role for Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "${var.project_name}-lambda-role"
+  name = "${local.full_project_name}-lambda-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -72,7 +79,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 
 # Bedrock permissions for Lambda
 resource "aws_iam_role_policy" "bedrock_policy" {
-  name = "${var.project_name}-bedrock-policy"
+  name = "${local.full_project_name}-bedrock-policy"
   role = aws_iam_role.lambda_role.id
 
   policy = jsonencode({
@@ -93,11 +100,11 @@ resource "aws_iam_role_policy" "bedrock_policy" {
 
 # CloudWatch log groups
 resource "aws_cloudwatch_log_group" "lambda_logs_direct" {
-  name              = "/aws/lambda/${var.project_name}-city-facts-direct"
+  name              = "/aws/lambda/${local.full_project_name}-city-facts-direct"
   retention_in_days = 14
 }
 
 resource "aws_cloudwatch_log_group" "lambda_logs_agent" {
-  name              = "/aws/lambda/${var.project_name}-city-facts-agent"
+  name              = "/aws/lambda/${local.full_project_name}-city-facts-agent"
   retention_in_days = 14
 }

@@ -1,0 +1,30 @@
+# Terraform Variables Example File
+# Copy this file to terraform.tfvars and customize the values
+
+# Optional 3-character prefix for resource names
+# Common uses: developer initials (jd, sm, ak) or environment names (dev, stg, prd)
+# Leave empty or comment out for no prefix (default behavior)
+# resource_prefix = "jd"   # Developer initials example
+# resource_prefix = "dev"  # Environment name example
+# resource_prefix = ""     # No prefix (default)
+
+# Knowledge Base Configuration
+# Option 1: Use Terraform-managed S3 bucket (recommended for new deployments)
+# enable_knowledge_base = true
+
+# Option 2: Use existing S3 bucket (for legacy deployments)
+# This is automatically set by the setup-knowledge-base-s3.sh script
+# Do not set this manually unless you have an existing bucket
+# knowledge_base_bucket_name = "jd-bedrock-kb-a1b2c3d4"
+
+# OpenSearch Access Configuration
+# Include current AWS user in OpenSearch access policy (useful for manual operations)
+# Set to false in production environments for better security
+# include_current_user_in_opensearch_access = true  # Default: true
+
+# AWS region (optional - defaults to us-east-1)
+# aws_region = "us-east-1"
+
+# Project name (optional - defaults to bedrock-agent-testbed)
+# Only change this if you want a completely different project name
+# project_name = "bedrock-agent-testbed"

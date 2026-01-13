@@ -2,6 +2,19 @@
 
 A comprehensive test environment for AWS Lambda functions integrated with Bedrock agents and knowledge bases, featuring both direct model access and agent-based architectures with OpenSearch Serverless vector storage.
 
+## 📚 Table of Contents
+
+- [Prerequisites and Requirements](#-prerequisites-and-requirements)
+- [Architecture Overview](#️-architecture-overview)
+- [AWS Access and Permissions](#-aws-access-and-permissions-requirements)
+- [Configuration](#️-configuration)
+- [Quick Start Deployment](#-quick-start-deployment)
+- [Testing](#-testing)
+- [Development Workflow](#️-development-workflow)
+- [Teardown and Cleanup](#-teardown-and-cleanup)
+- [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
+
 > **⚠️ IMPORTANT: Terraform State Management**
 > 
 > This project uses Terraform to manage AWS infrastructure. The `terraform.tfstate` file is **CRITICAL** - it maps your configuration to actual AWS resources. 
@@ -47,6 +60,174 @@ A comprehensive test environment for AWS Lambda functions integrated with Bedroc
 └─────────────────┘
 ```
 
+## 📋 Prerequisites and Requirements
+
+Before deploying this project, ensure you have the following tools installed and configured:
+
+### 🛠️ Required Tools
+
+#### 1. **Terraform** (>= 1.0)
+Infrastructure as Code tool for managing AWS resources.
+
+**Installation:**
+```bash
+# macOS (using Homebrew)
+brew install terraform
+
+# Windows (using Chocolatey)
+choco install terraform
+
+# Linux (Ubuntu/Debian)
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update && sudo apt install terraform
+
+# Verify installation
+terraform --version
+```
+
+**Alternative:** Download from [terraform.io](https://www.terraform.io/downloads)
+
+#### 2. **AWS CLI** (>= 2.0)
+Command-line interface for interacting with AWS services.
+
+**Installation:**
+```bash
+# macOS (using Homebrew)
+brew install awscli
+
+# Windows (using installer)
+# Download from: https://awscli.amazonaws.com/AWSCLIV2.msi
+
+# Linux (using pip)
+pip install awscli
+
+# Linux (using package manager)
+sudo apt install awscli  # Ubuntu/Debian
+sudo yum install awscli  # CentOS/RHEL
+
+# Verify installation
+aws --version
+```
+
+**Alternative:** Download from [AWS CLI Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
+#### 3. **Git**
+Version control system for cloning the repository.
+
+**Installation:**
+```bash
+# macOS (using Homebrew)
+brew install git
+
+# Windows
+# Download from: https://git-scm.com/download/win
+
+# Linux
+sudo apt install git      # Ubuntu/Debian
+sudo yum install git      # CentOS/RHEL
+
+# Verify installation
+git --version
+```
+
+### 🔧 Optional Tools (Recommended)
+
+#### **jq** - JSON processor for testing
+```bash
+# macOS
+brew install jq
+
+# Linux
+sudo apt install jq      # Ubuntu/Debian
+sudo yum install jq      # CentOS/RHEL
+
+# Windows
+# Download from: https://stedolan.github.io/jq/download/
+```
+
+#### **curl** - For API testing (usually pre-installed)
+```bash
+# Verify installation
+curl --version
+```
+
+### 📝 Development Notes
+
+**Python**: The Lambda functions use Python 3.11, but this runs in the AWS Lambda runtime. You don't need Python installed locally unless you plan to modify the Lambda source code.
+
+**System Tools**: The setup scripts use common system tools (`unzip`, `wget`, `curl`) that are typically pre-installed on most systems.
+
+### ✅ Verification Checklist
+
+Run these commands to verify all prerequisites are installed:
+
+```bash
+# Check Terraform
+terraform --version
+# Expected: Terraform v1.0+ 
+
+# Check AWS CLI
+aws --version
+# Expected: aws-cli/2.0+
+
+# Check Git
+git --version
+# Expected: git version 2.0+
+
+# Check AWS credentials (after configuration)
+aws sts get-caller-identity
+# Expected: JSON with your AWS account info
+
+# Optional: Check jq
+jq --version
+# Expected: jq-1.6+
+```
+
+### 🚨 Common Installation Issues
+
+**Terraform not found:**
+- Ensure Terraform binary is in your system PATH
+- Try restarting your terminal after installation
+
+**AWS CLI not configured:**
+- Run `aws configure` to set up credentials
+- Ensure you have appropriate AWS permissions (see next section)
+
+**Permission denied errors:**
+- On macOS/Linux, you may need to use `sudo` for system-wide installation
+- Consider using package managers (Homebrew, apt, yum) instead of manual installation
+
+### 🎯 Quick Setup Script
+
+For macOS users with Homebrew:
+```bash
+# Install all prerequisites at once
+brew install terraform awscli git jq
+
+# Verify installations
+terraform --version && aws --version && git --version && jq --version
+```
+
+For Ubuntu/Debian users:
+```bash
+# Update package list
+sudo apt update
+
+# Install prerequisites
+sudo apt install -y git curl jq
+
+# Install AWS CLI
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# Install Terraform
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update && sudo apt install terraform
+```
+
 ## 🔐 AWS Access and Permissions Requirements
 
 ### AWS CLI Configuration
@@ -85,24 +266,29 @@ For different environments, consider these alternatives:
 
 ### Required AWS Permissions
 
-This project requires extensive AWS permissions to create and manage multiple services. The following permissions are needed:
+This project requires extensive AWS permissions to create and manage multiple services. For the quickest setup, we recommend using admin access for development and testing.
 
-#### Core Infrastructure Permissions
-- **IAM**: Create and manage roles, policies, and policy attachments
-- **Lambda**: Create, update, and invoke functions
-- **CloudWatch**: Create and manage log groups
-- **S3**: Create buckets, upload objects, and manage bucket policies
+#### 🚀 Simplified Approach: Use Admin Access (Recommended for Development)
 
-#### Bedrock Permissions
-- **Bedrock**: Access to foundation models, create agents, knowledge bases, and data sources
-- **Bedrock Agent**: Create and manage agents, action groups, and knowledge base associations
-- **Bedrock Runtime**: Invoke models and retrieve from knowledge bases
+For development and testing, the easiest approach is to use an IAM user or role with `AdministratorAccess` policy:
 
-#### OpenSearch Serverless Permissions
-- **OpenSearch Serverless**: Create collections, security policies, and access policies
-- **OpenSearch**: Create and manage vector indices
+```bash
+# Check if you have admin access
+aws iam get-user
+aws sts get-caller-identity
 
-#### Minimum IAM Policy
+# Your user should have the AdministratorAccess policy attached
+```
+
+**Benefits:**
+- ✅ **Quick Setup**: No need to configure individual permissions
+- ✅ **Full Access**: Can create all required AWS resources
+- ✅ **Easy Testing**: Perfect for development and learning
+- ✅ **No Permission Issues**: Eliminates permission-related deployment failures
+
+**When to use:** Development, testing, learning, proof-of-concepts
+
+#### 🔒 Production Approach: Minimal IAM Policy
 
 For production environments, you can use this minimal policy instead of admin access:
 
@@ -192,17 +378,26 @@ For production environments, you can use this minimal policy instead of admin ac
 }
 ```
 
-#### Simplified Approach: Use Admin Access
+**When to use:** Production environments, security-conscious deployments, compliance requirements
 
-For development and testing, the easiest approach is to use an IAM user or role with `AdministratorAccess` policy:
+#### 📋 Detailed Permission Breakdown
 
-```bash
-# Check if you have admin access
-aws iam get-user
-aws sts get-caller-identity
+The following AWS services and permissions are required:
 
-# Your user should have the AdministratorAccess policy attached
-```
+**Core Infrastructure Permissions:**
+- **IAM**: Create and manage roles, policies, and policy attachments
+- **Lambda**: Create, update, and invoke functions
+- **CloudWatch**: Create and manage log groups
+- **S3**: Create buckets, upload objects, and manage bucket policies
+
+**Bedrock Permissions:**
+- **Bedrock**: Access to foundation models, create agents, knowledge bases, and data sources
+- **Bedrock Agent**: Create and manage agents, action groups, and knowledge base associations
+- **Bedrock Runtime**: Invoke models and retrieve from knowledge bases
+
+**OpenSearch Serverless Permissions:**
+- **OpenSearch Serverless**: Create collections, security policies, and access policies
+- **OpenSearch**: Create and manage vector indices
 
 ### AWS Region Requirements
 
@@ -257,9 +452,127 @@ aws bedrock list-foundation-models --region us-east-1
 aws opensearchserverless list-collections --region us-east-1
 ```
 
+## ⚙️ Configuration
+
+### 🔧 terraform.tfvars Setup
+
+Create your personal configuration file:
+
+```bash
+# Copy the example file
+cp terraform.tfvars.example terraform.tfvars
+
+# Edit with your preferences
+# terraform.tfvars (git-ignored)
+resource_prefix = "jd"                                    # Your 3-char prefix (optional)
+enable_knowledge_base = true                              # Enable Terraform-managed S3 & knowledge base
+include_current_user_in_opensearch_access = true          # Include current user in OpenSearch access (default: true)
+```
+
+### 🏷️ Resource Prefix Options
+
+| Prefix | Use Case | Example Resources |
+|--------|----------|-------------------|
+| `jd` | Developer initials | `jd-bedrock-agent-testbed-city-facts-direct` |
+| `dev` | Development environment | `dev-bedrock-agent-testbed-city-facts-direct` |
+| `stg` | Staging environment | `stg-bedrock-agent-testbed-city-facts-direct` |
+| _(none)_ | Default/production | `bedrock-agent-testbed-city-facts-direct` |
+
+### 📦 Knowledge Base Deployment Options
+
+| Option | Configuration | S3 Management | Use Case |
+|--------|---------------|---------------|----------|
+| **Terraform-Managed** | `enable_knowledge_base = true` | Automatic | New deployments (recommended) |
+| **External S3** | `knowledge_base_bucket_name = "bucket"` | Manual scripts | Legacy/existing buckets |
+| **Core Only** | _(neither set)_ | None | Lambda + Agent only |
+
+### 🔐 OpenSearch Access Configuration
+
+The project includes a configurable option for OpenSearch Serverless access:
+
+```bash
+# terraform.tfvars
+include_current_user_in_opensearch_access = true   # Default: true
+```
+
+**When to use `true` (default):**
+- ✅ **Development**: Allows manual OpenSearch operations
+- ✅ **Debugging**: Direct access to vector indices
+- ✅ **Testing**: Manual index creation and management
+
+**When to use `false`:**
+- 🔒 **Production**: Better security posture
+- 🔒 **Shared environments**: Limit access to service roles only
+
+**What it does:**
+- Automatically includes your current AWS user/role in OpenSearch access policy
+- Uses `data.aws_caller_identity.current.arn` for dynamic user detection
+- No hardcoded user ARNs in configuration
+
 ## 🚀 Quick Start Deployment
 
-### Option 1: Automated Deployment (Recommended)
+### 🆕 Latest Improvements
+
+**Recent enhancements for better developer experience:**
+
+- **🔐 Dynamic User Access**: Automatically includes current AWS user in OpenSearch access policy
+- **🪣 Smart S3 Management**: Automatic bucket emptying during teardown prevents errors
+- **⚙️ Environment Variables**: Lambda functions use dynamic configuration instead of hardcoded values
+- **🔄 Error-Free Teardown**: Improved teardown process handles versioned buckets and delete markers
+- **📋 Better Documentation**: Comprehensive configuration options and troubleshooting guides
+
+### 🎯 New Simplified Deployment (Recommended)
+
+The easiest way to deploy everything with Terraform-managed S3 and automatic file uploads:
+
+```bash
+# Clone and navigate to the project
+git clone https://github.com/your-username/bedrock-agent-testbed.git
+cd bedrock-agent-testbed
+
+# Deploy everything with one command (no prefix)
+./scripts/deploy-complete.sh
+
+# OR deploy with a 3-character prefix for multi-developer environments
+./scripts/deploy-complete.sh jd   # Using your initials
+./scripts/deploy-complete.sh dev  # Using environment name
+```
+
+This single command will:
+1. ✅ Initialize Terraform
+2. ✅ Create all infrastructure (Lambda, IAM, Bedrock Agent)
+3. ✅ Create S3 bucket with proper naming
+4. ✅ Upload knowledge base CSV files automatically
+5. ✅ Create OpenSearch Serverless collection
+6. ✅ Create Bedrock knowledge base with data sources
+7. ✅ Associate everything together
+8. ✅ Provide test commands for immediate use
+
+**Total deployment time**: ~5-10 minutes
+
+### 🏷️ Resource Prefixing for Multi-Developer Environments
+
+This project supports optional 3-character prefixes to avoid resource name collisions:
+
+```bash
+# Deploy with developer initials
+./scripts/deploy-complete.sh jd    # Creates: jd-bedrock-agent-testbed-*
+
+# Deploy with environment name  
+./scripts/deploy-complete.sh dev   # Creates: dev-bedrock-agent-testbed-*
+
+# Deploy without prefix (default)
+./scripts/deploy-complete.sh       # Creates: bedrock-agent-testbed-*
+```
+
+**Benefits:**
+- Multiple developers can deploy to the same AWS account
+- Environment isolation (dev, staging, prod)
+- Easy resource identification and cost tracking
+
+### Option 2: Legacy Deployment (External S3 Management)
+
+For existing deployments or when you need external S3 bucket management:
 
 For a completely automated deployment, use the provided script:
 
@@ -269,7 +582,7 @@ git clone https://github.com/your-username/bedrock-agent-testbed.git
 cd bedrock-agent-testbed
 
 # Run the complete deployment script
-./deploy-complete.sh
+./scripts/deploy-complete.sh
 ```
 
 This script will:
@@ -282,7 +595,28 @@ This script will:
 7. Ingest all data sources
 8. Test the deployment
 
-### Option 2: Manual Step-by-Step Deployment
+### 🔧 Configuration Options
+
+#### Option 1: Terraform-Managed S3 (Default)
+Set `enable_knowledge_base = true` in your `terraform.tfvars`:
+
+```hcl
+# terraform.tfvars
+resource_prefix = "jd"           # Optional 3-char prefix
+enable_knowledge_base = true     # Enable Terraform-managed S3
+```
+
+#### Option 2: External S3 Bucket
+Use the legacy setup script and reference existing bucket:
+
+```bash
+./setup-knowledge-base-s3.sh jd  # Creates external S3 bucket
+# terraform.tfvars will be updated automatically
+```
+
+### Option 3: Manual Step-by-Step Deployment
+
+For advanced users who want full control over each step:
 
 ### Prerequisites
 - AWS CLI configured with appropriate permissions
@@ -451,7 +785,10 @@ cat response.json | jq -r '.body' | jq .
 
 ## 🧪 Testing
 
-### Quick Testing with Scripts
+### 🚀 Quick Testing with Scripts
+
+The testing scripts automatically detect your resource prefix and use the correct function names:
+
 ```bash
 # Test both direct and agent-based approaches with cities that have complete data
 ./test-lambda.sh both Geneva
@@ -461,7 +798,23 @@ cat response.json | jq -r '.body' | jq .
 ./test-lambda.sh agent "Zurich"
 
 # Use development workflow helper with recommended cities
-./dev-workflow.sh test Basel
+./scripts/dev-workflow.sh test Basel
+```
+
+### 🎯 Automatic Prefix Detection
+
+All scripts automatically detect your prefix from `terraform.tfvars`:
+
+```bash
+# If terraform.tfvars contains: resource_prefix = "jd"
+./test-lambda.sh both Geneva
+# → Tests: jd-bedrock-agent-testbed-city-facts-direct
+# → Tests: jd-bedrock-agent-testbed-city-facts-agent
+
+# Without prefix
+./test-lambda.sh both Geneva  
+# → Tests: bedrock-agent-testbed-city-facts-direct
+# → Tests: bedrock-agent-testbed-city-facts-agent
 ```
 
 ## 🔥 Teardown and Cleanup
@@ -496,9 +849,10 @@ This project provides multiple teardown options depending on your needs. Choose 
 
 **Interactive Process:**
 1. **Confirmation**: Script shows all resources to be destroyed
-2. **Infrastructure**: Destroys all Terraform-managed resources
-3. **S3 Cleanup**: Asks if you want to delete S3 bucket and data
-4. **Local Files**: Asks if you want to clean up configuration files
+2. **S3 Auto-Empty**: Automatically empties S3 bucket before destruction
+3. **Infrastructure**: Destroys all Terraform-managed resources
+4. **Legacy S3 Cleanup**: Asks if you want to delete any legacy S3 buckets
+5. **Local Files**: Asks if you want to clean up configuration files
 
 **What gets destroyed:**
 - ✅ All Lambda functions and IAM roles
@@ -506,8 +860,14 @@ This project provides multiple teardown options depending on your needs. Choose 
 - ✅ Knowledge base and data sources
 - ✅ OpenSearch Serverless collection
 - ✅ CloudWatch log groups
-- ✅ S3 bucket and data (optional)
+- ✅ S3 bucket and data (automatically emptied)
 - ✅ Local configuration files (optional)
+
+**🆕 New Features:**
+- **Automatic S3 Emptying**: No more "bucket not empty" errors
+- **Handles Versioned Buckets**: Deletes all versions and delete markers
+- **Dynamic Bucket Detection**: Gets bucket name from Terraform state
+- **Error-Free Teardown**: Smooth destruction process
 
 **Estimated time:** 5-10 minutes (OpenSearch deletion is slow)
 
@@ -645,7 +1005,7 @@ terraform apply  # Uses existing S3 bucket
 
 **After Complete Teardown:**
 ```bash
-./deploy-complete.sh  # Full redeployment needed
+./scripts/deploy-complete.sh  # Full redeployment needed
 ```
 
 **After S3-Only Teardown:**
@@ -756,9 +1116,33 @@ This project uses real-world datasets sourced from **[Kaggle](https://www.kaggle
 
 ## 🛠️ Development Workflow
 
-### Quick Lambda Updates (No Terraform)
+### 🚀 Simplified Workflow with Terraform-Managed S3
+
+The new approach eliminates most manual steps:
+
 ```bash
-# Deploy both functions
+# Complete deployment (includes S3, files, and knowledge base)
+./scripts/deploy-complete.sh jd
+
+# Update Lambda code only (auto-detects prefix)
+./scripts/deploy-lambda.sh
+
+# Test functions (auto-detects prefix)  
+./test-lambda.sh both Geneva
+
+# Check deployment status (shows all resources with prefix)
+./scripts/dev-workflow.sh status
+
+# View logs (auto-detects function names)
+./scripts/dev-workflow.sh logs-direct
+./scripts/dev-workflow.sh logs-agent
+```
+
+### 🔄 Quick Lambda Updates (No Terraform)
+
+For rapid development iterations:
+```bash
+# Deploy both functions (auto-detects prefix from terraform.tfvars)
 ./deploy-lambda.sh
 
 # Deploy specific function
@@ -766,16 +1150,36 @@ This project uses real-world datasets sourced from **[Kaggle](https://www.kaggle
 ./deploy-agent.sh       # Agent-based only
 ```
 
-### Knowledge Base Management
+### 📊 Development Helper Commands
+
+```bash
+# Show comprehensive status (all resources with your prefix)
+./scripts/dev-workflow.sh status
+
+# Test with recommended cities
+./scripts/dev-workflow.sh test Geneva
+./scripts/dev-workflow.sh test-agent Berlin
+
+# View recent logs
+./scripts/dev-workflow.sh logs-direct
+./scripts/dev-workflow.sh logs-agent
+
+# Quick Terraform operations
+./scripts/dev-workflow.sh terraform
+```
+
+### 🗂️ Legacy S3 Management (External Buckets)
+
+For existing deployments using external S3 buckets:
 ```bash
 # Setup S3 bucket and upload data
-./dev-workflow.sh setup-kb-s3
+./scripts/dev-workflow.sh setup-kb-s3
 
 # Check knowledge base status
-./dev-workflow.sh check-kb-s3
+./scripts/dev-workflow.sh check-kb-s3
 
 # Clean up (if needed)
-./dev-workflow.sh cleanup-kb-s3
+./scripts/dev-workflow.sh cleanup-kb-s3
 ```
 
 ### Infrastructure Changes
@@ -789,20 +1193,36 @@ terraform apply
 
 ```
 .
-├── main.tf                           # Main Terraform configuration
-├── lambda.tf                         # Lambda functions and IAM
-├── bedrock_agent.tf                  # Bedrock agent configuration
-├── bedrock_knowledge_base_simple.tf  # Knowledge base and data sources
-├── outputs.tf                        # Terraform outputs
-├── terraform.tfvars                  # 🔧 Terraform variables (created by setup script)
-├── terraform.tfstate                 # ⚠️ CRITICAL: Infrastructure state (DO NOT DELETE)
-├── .kb-bucket-name                   # 📝 S3 bucket name reference
-├── import-existing-resources.sh      # 🆘 State recovery script
-├── lambda_src/
-│   └── index.py                      # Direct model access Lambda
-├── lambda_agent_src/
-│   └── index.py                      # Agent-based Lambda
-├── data/
+├── terraform/                        # 🏗️ Infrastructure as Code
+│   ├── main.tf                       # Main Terraform configuration with prefix support
+│   ├── lambda.tf                     # Lambda functions and IAM (prefix-aware)
+│   ├── bedrock_agent.tf              # Bedrock agent configuration (prefix-aware)
+│   ├── bedrock_knowledge_base_simple.tf # Knowledge base with Terraform-managed S3
+│   ├── outputs.tf                    # Terraform outputs (prefix-aware)
+│   ├── terraform.tfvars              # 🔧 Your personal config (git-ignored, prefix settings)
+│   ├── terraform.tfvars.example      # 📋 Example configuration file
+│   ├── terraform.tfstate             # ⚠️ CRITICAL: Infrastructure state (DO NOT DELETE)
+│   └── .terraform/                   # Terraform working directory
+├── scripts/                          # 🛠️ Deployment and Management Scripts
+│   ├── deploy-complete.sh            # 🚀 Complete automated deployment (NEW)
+│   ├── deploy-lambda.sh              # Deploy Lambda functions (prefix-aware)
+│   ├── deploy-direct.sh              # Deploy direct model Lambda only
+│   ├── deploy-agent.sh               # Deploy agent Lambda only
+│   ├── build.sh                      # Build Lambda packages
+│   ├── test-lambda.sh                # 🧪 Testing script (prefix-aware)
+│   ├── dev-workflow.sh               # 🛠️ Development helper (prefix-aware)
+│   ├── teardown-complete.sh          # 🔥 Complete infrastructure teardown
+│   ├── teardown-infrastructure.sh    # 🏗️ Infrastructure-only teardown
+│   ├── teardown-s3-only.sh           # 🪣 S3 data teardown
+│   ├── import-existing-resources.sh  # 🆘 State recovery script (prefix-aware)
+│   ├── setup-knowledge-base-s3.sh    # 📦 Legacy S3 setup (external buckets)
+│   └── check-knowledge-base-s3.sh    # 🔍 Check S3 status
+├── src/                              # 💻 Lambda Source Code
+│   ├── lambda_direct/
+│   │   └── index.py                  # Direct model access Lambda
+│   └── lambda_agent/
+│       └── index.py                  # Agent-based Lambda
+├── data/                             # 📊 Test Data and Knowledge Base Content
 │   ├── lambda-tests/                 # Test payloads
 │   │   ├── direct-*.json
 │   │   ├── agent-*.json
@@ -811,30 +1231,148 @@ terraform apply
 │       ├── world_cities_air_quality_water_pollution_2021.csv
 │       ├── world_cities_cost_of_living_2018.csv
 │       └── README.md
-├── build.sh                          # Build Lambda packages
-├── deploy-complete.sh                # 🚀 Complete automated deployment
-├── deploy-*.sh                       # Individual deployment scripts
-├── teardown-complete.sh              # 🔥 Complete infrastructure teardown
-├── teardown-infrastructure.sh        # 🏗️ Infrastructure-only teardown
-├── teardown-s3-only.sh               # 🪣 S3 data teardown
-├── create-opensearch-index.sh        # 🔧 Automate OpenSearch index creation
-├── test-lambda.sh                    # Testing script
-├── dev-workflow.sh                   # Development helper
-├── setup-knowledge-base-s3.sh        # S3 setup for knowledge base
-├── check-knowledge-base-s3.sh        # Check S3 status
-├── cleanup-knowledge-base-s3.sh      # S3 cleanup (legacy)
+├── .kb-bucket-name                   # 📝 S3 bucket name reference (legacy)
+├── *.zip                             # Generated Lambda packages (git-ignored)
+├── test_*.json                       # Generated test results (git-ignored)
 └── README.md                         # This file
+```
+
+### 🔑 Key Files and Folders
+
+**📁 terraform/** - Infrastructure as Code
+- All Terraform configuration files
+- Your personal `terraform.tfvars` settings
+- **CRITICAL**: `terraform.tfstate` file (never delete!)
+
+**📁 scripts/** - Automation and Management
+- All deployment, testing, and teardown scripts
+- Auto-detect resource prefixes from terraform.tfvars
+- Run from project root: `./scripts/deploy-complete.sh`
+
+**📁 src/** - Lambda Source Code
+- Organized by function type
+- `lambda_direct/` - Direct model access
+- `lambda_agent/` - Agent-based approach
+
+**📁 data/** - Test Data and Knowledge Base
+- `lambda-tests/` - JSON payloads for testing
+- `knowledge-base/` - CSV files for vector database
+
+### 🚀 Quick Start Commands
+
+```bash
+# Complete deployment (from project root)
+./scripts/deploy-complete.sh jd
+
+# Update Lambda code only
+./scripts/deploy-lambda.sh
+
+# Test functions
+./scripts/test-lambda.sh both Geneva
+
+# Development workflow helper
+./scripts/dev-workflow.sh status
+
+# Terraform operations
+cd terraform && terraform plan && cd ..
+
+# Complete teardown
+./scripts/teardown-complete.sh
 ```
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
-#### 1. Lost Terraform State File
+#### 1. OpenSearch Vector Index Creation (New Deployment Process)
+**Problem**: Knowledge base creation fails with "no such index [bedrock-knowledge-base-default-index]"
+**Solution**: The deployment process now handles this automatically, but if you encounter issues:
+
+```bash
+# Get collection ID from Terraform output
+COLLECTION_ID=$(terraform output -raw opensearch_collection_id)
+
+# Create the vector index manually
+aws opensearchserverless create-index \
+  --id "$COLLECTION_ID" \
+  --index-name "bedrock-knowledge-base-default-index" \
+  --index-schema '{
+    "settings": {"index": {"knn": true}},
+    "mappings": {
+      "properties": {
+        "embeddings": {
+          "type": "knn_vector",
+          "dimension": 1536,
+          "method": {"name": "hnsw", "space_type": "l2", "engine": "faiss"}
+        },
+        "text": {"type": "text"},
+        "bedrock-metadata": {"type": "text"}
+      }
+    }
+  }' \
+  --region us-east-1
+```
+
+**Root Cause**: OpenSearch Serverless requires the vector index to exist before knowledge base creation
+**Prevention**: Use the complete deployment script which handles this automatically
+
+#### 2. S3 Bucket Not Empty During Teardown
+**Problem**: `terraform destroy` fails with "BucketNotEmpty" error
+**Solution**: This is now handled automatically by the teardown script, but if you encounter it:
+
+```bash
+# The teardown script now automatically empties buckets, but manual cleanup:
+BUCKET_NAME=$(terraform output -raw s3_knowledge_base_bucket)
+aws s3 rm s3://$BUCKET_NAME --recursive
+aws s3api delete-objects --bucket $BUCKET_NAME \
+  --delete "$(aws s3api list-object-versions --bucket $BUCKET_NAME \
+  --query '{Objects: Versions[].{Key: Key, VersionId: VersionId}}' --output json)"
+```
+
+**Root Cause**: S3 buckets with versioning enabled require all versions to be deleted
+**Prevention**: Use `./teardown-complete.sh` which handles this automatically
+
+#### 3. OpenSearch Access Denied
+**Problem**: "Access denied to create index" or "403 Forbidden" when accessing OpenSearch
+**Solution**: Check your OpenSearch access configuration:
+
+```bash
+# Verify your current AWS identity
+aws sts get-caller-identity
+
+# Check if include_current_user_in_opensearch_access is enabled
+grep include_current_user_in_opensearch_access terraform/terraform.tfvars
+
+# If not set, add it to terraform.tfvars:
+echo "include_current_user_in_opensearch_access = true" >> terraform/terraform.tfvars
+terraform apply
+```
+
+**Root Cause**: OpenSearch access policy doesn't include your current user
+**Prevention**: The default configuration now includes current user automatically
+
+#### 4. Lambda Environment Variables Missing
+**Problem**: Agent Lambda function fails with "BEDROCK_AGENT_ID environment variable not set"
+**Solution**: This is now handled automatically, but if you encounter it:
+
+```bash
+# Check if Lambda has environment variables
+aws lambda get-function-configuration \
+  --function-name $(terraform output -raw lambda_function_agent_name) \
+  --query 'Environment.Variables'
+
+# If missing, redeploy the Lambda function
+./scripts/deploy-lambda.sh
+```
+
+**Root Cause**: Lambda function missing dynamic environment variables
+**Prevention**: Use the latest deployment scripts which set environment variables automatically
+
+#### 5. Lost Terraform State File
 **Problem**: Accidentally deleted `terraform.tfstate` file
 **Solution**: Use the provided import script to recover state from existing AWS resources
 ```bash
-./import-existing-resources.sh
+./scripts/import-existing-resources.sh
 ```
 This script will:
 - Detect your existing S3 bucket
@@ -842,37 +1380,37 @@ This script will:
 - Recreate `terraform.tfvars` and `.kb-bucket-name` files
 - Verify the import with `terraform plan`
 
-#### 2. Missing terraform.tfvars File
+#### 6. Missing terraform.tfvars File
 **Problem**: `terraform plan` fails with "no file exists at .kb-bucket-name"
 **Solution**: 
 ```bash
 # Option 1: Run the S3 setup script (creates terraform.tfvars automatically)
-./setup-knowledge-base-s3.sh
+./scripts/setup-knowledge-base-s3.sh
 
 # Option 2: Create terraform.tfvars manually with your existing bucket name
-echo 'knowledge_base_bucket_name = "your-bucket-name"' > terraform.tfvars
+echo 'knowledge_base_bucket_name = "your-bucket-name"' > terraform/terraform.tfvars
 ```
 
-#### 3. OpenSearch Index Creation Fails
+#### 7. OpenSearch Index Creation Fails (Legacy)
 **Problem**: "Access denied to create index" in AWS Console
 **Solution**: The manual CLI approach is required due to OpenSearch Serverless permissions
 
-#### 4. Knowledge Base Creation Fails
+#### 8. Knowledge Base Creation Fails (Legacy)
 **Problem**: "no such index [bedrock-knowledge-base-default-index]"
 **Solution**: Ensure Step 4 (manual index creation) is completed before running terraform apply
 
-#### 5. Agent Access Denied to Knowledge Base
+#### 9. Agent Access Denied to Knowledge Base
 **Problem**: "Access denied when calling Bedrock KnowledgeBase retrieve"
 **Solution**: Ensure the agent IAM role has `bedrock:Retrieve` permission (included in Terraform)
 
-#### 6. Ingestion Jobs Fail
+#### 10. Ingestion Jobs Fail
 **Problem**: Ingestion jobs fail or show 0 documents processed
 **Solution**: 
 - Verify S3 bucket permissions
 - Check CSV file format and location
 - Ensure knowledge base role has S3 access
 
-#### 7. Stuck Resources During Teardown
+#### 11. Stuck Resources During Teardown
 **Problem**: `terraform destroy` fails with resource dependencies or timeouts
 **Solution**:
 ```bash
@@ -885,7 +1423,7 @@ terraform destroy -target=aws_bedrockagent_data_source.cost_of_living_data_simpl
 terraform destroy
 ```
 
-#### 8. OpenSearch Collection Won't Delete
+#### 12. OpenSearch Collection Won't Delete
 **Problem**: OpenSearch Serverless collection deletion hangs or fails
 **Solution**: 
 - Wait 10-15 minutes (OpenSearch deletions are slow)
@@ -960,33 +1498,61 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🚀 Quick Reference
 
-### Common Operations
+### 🎯 New Deployment (Terraform-Managed S3)
 ```bash
-# 🏗️ Deploy everything
-./deploy-complete.sh
+# 🏗️ Deploy everything with prefix
+./deploy-complete.sh jd
 
-# 🧪 Test functions with cities that have complete knowledge base data
+# 🧪 Test functions (auto-detects prefix)
 ./test-lambda.sh both Geneva
 
 # 🔄 Update Lambda code only
 ./deploy-lambda.sh
 
 # 📊 Check infrastructure status
-terraform plan
+./scripts/dev-workflow.sh status
 
-# 🔥 Teardown options
-./teardown-complete.sh      # Complete cleanup
-./teardown-infrastructure.sh # Keep S3 data
-./teardown-s3-only.sh       # Keep infrastructure
-
-# 📦 Setup S3 only
-./setup-knowledge-base-s3.sh
-
-# 🆘 Recover lost state
-./import-existing-resources.sh
+# 🔥 Complete teardown
+./teardown-complete.sh
 ```
 
-### Teardown Quick Guide
+### 🛠️ Development Operations
+```bash
+# 🔧 Build Lambda packages
+./build.sh
+
+# 🚀 Deploy functions (auto-detects prefix)
+./deploy-lambda.sh
+./deploy-direct.sh
+./deploy-agent.sh
+
+# 🧪 Test with recommended cities
+./scripts/test-lambda.sh both Geneva
+./scripts/dev-workflow.sh test Berlin
+
+# 📋 View logs (auto-detects function names)
+./scripts/dev-workflow.sh logs-direct
+./scripts/dev-workflow.sh logs-agent
+
+# 📊 Infrastructure operations
+cd terraform && terraform plan && cd ..
+cd terraform && terraform apply && cd ..
+./scripts/dev-workflow.sh terraform
+```
+
+### 🗂️ Legacy Operations (External S3)
+```bash
+# 📦 Setup external S3 bucket
+./setup-knowledge-base-s3.sh jd
+
+# 🔍 Check S3 status
+./check-knowledge-base-s3.sh
+
+# 🧹 S3 cleanup only
+./teardown-s3-only.sh
+```
+
+### 🔥 Teardown Options
 ```bash
 # Scenario 1: Done with project permanently
 ./teardown-complete.sh

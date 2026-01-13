@@ -8,14 +8,68 @@ data "aws_s3_bucket" "knowledge_base" {
   bucket = var.knowledge_base_bucket_name
 }
 
-# OpenSearch Serverless Collection for Knowledge Base
-resource "aws_opensearchserverless_collection" "knowledge_base" {
-  name = "${substr(var.project_name, 0, 20)}-kb-coll"
-  type = "VECTORSEARCH"
+# S3 bucket for knowledge base (Terraform-managed)
+resource "aws_s3_bucket" "knowledge_base_managed" {
+  count  = var.knowledge_base_bucket_name == "" ? 1 : 0
+  bucket = "${local.s3_prefix}bedrock-kb-${random_id.kb_suffix.hex}"
 
   tags = {
     Environment = "development"
-    Project     = var.project_name
+    Project     = local.full_project_name
+    Purpose     = "bedrock-knowledge-base"
+  }
+}
+
+# S3 bucket versioning
+resource "aws_s3_bucket_versioning" "knowledge_base_managed" {
+  count  = var.knowledge_base_bucket_name == "" ? 1 : 0
+  bucket = aws_s3_bucket.knowledge_base_managed[0].id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Upload knowledge base files using local-exec provisioner
+resource "null_resource" "upload_knowledge_base_files" {
+  count = var.knowledge_base_bucket_name == "" ? 1 : 0
+
+  # Trigger re-upload if files change
+  triggers = {
+    air_quality_file = filemd5("../data/knowledge-base/world_cities_air_quality_water_pollution_2021.csv")
+    cost_living_file = filemd5("../data/knowledge-base/world_cities_cost_of_living_2018.csv")
+    bucket_name      = aws_s3_bucket.knowledge_base_managed[0].bucket
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "📤 Uploading knowledge base files to ${aws_s3_bucket.knowledge_base_managed[0].bucket}..."
+      aws s3 cp ../data/knowledge-base/world_cities_air_quality_water_pollution_2021.csv s3://${aws_s3_bucket.knowledge_base_managed[0].bucket}/world_cities_air_quality_water_pollution_2021.csv
+      aws s3 cp ../data/knowledge-base/world_cities_cost_of_living_2018.csv s3://${aws_s3_bucket.knowledge_base_managed[0].bucket}/world_cities_cost_of_living_2018.csv
+      echo "✅ Files uploaded successfully"
+    EOT
+  }
+
+  depends_on = [
+    aws_s3_bucket.knowledge_base_managed,
+    aws_s3_bucket_versioning.knowledge_base_managed
+  ]
+}
+
+# Local value to determine which bucket to use
+locals {
+  knowledge_base_bucket_arn = var.knowledge_base_bucket_name != "" ? data.aws_s3_bucket.knowledge_base[0].arn : aws_s3_bucket.knowledge_base_managed[0].arn
+  knowledge_base_bucket_name = var.knowledge_base_bucket_name != "" ? var.knowledge_base_bucket_name : aws_s3_bucket.knowledge_base_managed[0].bucket
+}
+
+# OpenSearch Serverless Collection for Knowledge Base
+resource "aws_opensearchserverless_collection" "knowledge_base" {
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${substr(local.full_project_name, 0, 20)}-kb-coll"
+  type  = "VECTORSEARCH"
+
+  tags = {
+    Environment = "development"
+    Project     = local.full_project_name
   }
 
   depends_on = [
@@ -27,8 +81,9 @@ resource "aws_opensearchserverless_collection" "knowledge_base" {
 
 # OpenSearch Serverless Access Policy
 resource "aws_opensearchserverless_access_policy" "knowledge_base" {
-  name = "${substr(var.project_name, 0, 20)}-kb-access"
-  type = "data"
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${substr(local.full_project_name, 0, 20)}-kb-access"
+  type  = "data"
   
   policy = jsonencode([
     {
@@ -36,7 +91,7 @@ resource "aws_opensearchserverless_access_policy" "knowledge_base" {
         {
           ResourceType = "collection"
           Resource = [
-            "collection/${substr(var.project_name, 0, 20)}-kb-coll"
+            "collection/${substr(local.full_project_name, 0, 20)}-kb-coll"
           ]
           Permission = [
             "aoss:CreateCollectionItems",
@@ -48,7 +103,7 @@ resource "aws_opensearchserverless_access_policy" "knowledge_base" {
         {
           ResourceType = "index"
           Resource = [
-            "index/${substr(var.project_name, 0, 20)}-kb-coll/*"
+            "index/${substr(local.full_project_name, 0, 20)}-kb-coll/*"
           ]
           Permission = [
             "aoss:CreateIndex",
@@ -60,17 +115,19 @@ resource "aws_opensearchserverless_access_policy" "knowledge_base" {
           ]
         }
       ]
-      Principal = [
-        aws_iam_role.knowledge_base_role.arn
-      ]
+      Principal = concat(
+        [aws_iam_role.knowledge_base_role.arn],
+        var.include_current_user_in_opensearch_access ? [data.aws_caller_identity.current.arn] : []
+      )
     }
   ])
 }
 
 # OpenSearch Serverless Network Policy
 resource "aws_opensearchserverless_security_policy" "knowledge_base_network" {
-  name = "${substr(var.project_name, 0, 20)}-kb-network"
-  type = "network"
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${substr(local.full_project_name, 0, 20)}-kb-network"
+  type  = "network"
   
   policy = jsonencode([
     {
@@ -78,13 +135,13 @@ resource "aws_opensearchserverless_security_policy" "knowledge_base_network" {
         {
           ResourceType = "collection"
           Resource = [
-            "collection/${substr(var.project_name, 0, 20)}-kb-coll"
+            "collection/${substr(local.full_project_name, 0, 20)}-kb-coll"
           ]
         },
         {
           ResourceType = "dashboard"
           Resource = [
-            "collection/${substr(var.project_name, 0, 20)}-kb-coll"
+            "collection/${substr(local.full_project_name, 0, 20)}-kb-coll"
           ]
         }
       ]
@@ -95,15 +152,16 @@ resource "aws_opensearchserverless_security_policy" "knowledge_base_network" {
 
 # OpenSearch Serverless Encryption Policy
 resource "aws_opensearchserverless_security_policy" "knowledge_base_encryption" {
-  name = "${substr(var.project_name, 0, 18)}-kb-encrypt"
-  type = "encryption"
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${substr(local.full_project_name, 0, 18)}-kb-encrypt"
+  type  = "encryption"
   
   policy = jsonencode({
     Rules = [
       {
         ResourceType = "collection"
         Resource = [
-          "collection/${substr(var.project_name, 0, 20)}-kb-coll"
+          "collection/${substr(local.full_project_name, 0, 20)}-kb-coll"
         ]
       }
     ]
@@ -113,7 +171,7 @@ resource "aws_opensearchserverless_security_policy" "knowledge_base_encryption" 
 
 # IAM Role for Knowledge Base
 resource "aws_iam_role" "knowledge_base_role" {
-  name = "${var.project_name}-knowledge-base-role"
+  name = "${local.full_project_name}-knowledge-base-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -131,8 +189,9 @@ resource "aws_iam_role" "knowledge_base_role" {
 
 # IAM Policy for Knowledge Base to access S3
 resource "aws_iam_role_policy" "knowledge_base_s3_policy" {
-  name = "${var.project_name}-knowledge-base-s3-policy"
-  role = aws_iam_role.knowledge_base_role.id
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${local.full_project_name}-knowledge-base-s3-policy"
+  role  = aws_iam_role.knowledge_base_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -144,8 +203,8 @@ resource "aws_iam_role_policy" "knowledge_base_s3_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          data.aws_s3_bucket.knowledge_base[0].arn,
-          "${data.aws_s3_bucket.knowledge_base[0].arn}/*"
+          local.knowledge_base_bucket_arn,
+          "${local.knowledge_base_bucket_arn}/*"
         ]
       }
     ]
@@ -154,8 +213,9 @@ resource "aws_iam_role_policy" "knowledge_base_s3_policy" {
 
 # IAM Policy for Knowledge Base to access OpenSearch
 resource "aws_iam_role_policy" "knowledge_base_opensearch_policy" {
-  name = "${var.project_name}-knowledge-base-opensearch-policy"
-  role = aws_iam_role.knowledge_base_role.id
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${local.full_project_name}-knowledge-base-opensearch-policy"
+  role  = aws_iam_role.knowledge_base_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -166,7 +226,7 @@ resource "aws_iam_role_policy" "knowledge_base_opensearch_policy" {
           "aoss:APIAccessAll"
         ]
         Resource = [
-          aws_opensearchserverless_collection.knowledge_base.arn
+          aws_opensearchserverless_collection.knowledge_base[0].arn
         ]
       },
       {
@@ -180,7 +240,7 @@ resource "aws_iam_role_policy" "knowledge_base_opensearch_policy" {
           "aoss:WriteDocument"
         ]
         Resource = [
-          "${aws_opensearchserverless_collection.knowledge_base.arn}/*"
+          "${aws_opensearchserverless_collection.knowledge_base[0].arn}/*"
         ]
       }
     ]
@@ -189,8 +249,9 @@ resource "aws_iam_role_policy" "knowledge_base_opensearch_policy" {
 
 # IAM Policy for Knowledge Base to access Bedrock models
 resource "aws_iam_role_policy" "knowledge_base_bedrock_policy" {
-  name = "${var.project_name}-knowledge-base-bedrock-policy"
-  role = aws_iam_role.knowledge_base_role.id
+  count = local.deploy_knowledge_base ? 1 : 0
+  name  = "${local.full_project_name}-knowledge-base-bedrock-policy"
+  role  = aws_iam_role.knowledge_base_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -213,10 +274,70 @@ resource "random_id" "kb_suffix" {
   byte_length = 6
 }
 
+# Create OpenSearch vector index automatically
+resource "null_resource" "create_opensearch_vector_index" {
+  count = local.deploy_knowledge_base ? 1 : 0
+
+  # Trigger recreation if collection changes
+  triggers = {
+    collection_id = aws_opensearchserverless_collection.knowledge_base[0].id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "🔍 Creating OpenSearch vector index..."
+      echo "   Collection ID: ${aws_opensearchserverless_collection.knowledge_base[0].id}"
+      
+      # Create the vector index
+      aws opensearchserverless create-index \
+        --id "${aws_opensearchserverless_collection.knowledge_base[0].id}" \
+        --index-name "bedrock-knowledge-base-default-index" \
+        --index-schema '{
+          "settings": {
+            "index": {
+              "knn": true
+            }
+          },
+          "mappings": {
+            "properties": {
+              "embeddings": {
+                "type": "knn_vector",
+                "dimension": 1536,
+                "method": {
+                  "name": "hnsw",
+                  "space_type": "l2",
+                  "engine": "faiss"
+                }
+              },
+              "text": {
+                "type": "text"
+              },
+              "bedrock-metadata": {
+                "type": "text"
+              }
+            }
+          }
+        }' \
+        --region us-east-1 || echo "⚠️  Index may already exist"
+      
+      echo "✅ Vector index creation completed"
+      
+      # Wait for index to be ready
+      echo "⏳ Waiting for index to be ready..."
+      sleep 10
+    EOT
+  }
+
+  depends_on = [
+    aws_opensearchserverless_collection.knowledge_base,
+    aws_opensearchserverless_access_policy.knowledge_base
+  ]
+}
+
 # Bedrock Knowledge Base using OpenSearch Serverless
 resource "aws_bedrockagent_knowledge_base" "city_facts_simple" {
-  count    = var.knowledge_base_bucket_name != "" ? 1 : 0
-  name     = "${var.project_name}-city-facts-kb-s3"
+  count    = local.deploy_knowledge_base ? 1 : 0
+  name     = "${local.full_project_name}-city-facts-kb-s3"
   role_arn = aws_iam_role.knowledge_base_role.arn
   
   description = "Knowledge base containing city facts, air quality, and cost of living data (S3 Vectors)"
@@ -231,7 +352,7 @@ resource "aws_bedrockagent_knowledge_base" "city_facts_simple" {
   storage_configuration {
     type = "OPENSEARCH_SERVERLESS"
     opensearch_serverless_configuration {
-      collection_arn    = aws_opensearchserverless_collection.knowledge_base.arn
+      collection_arn    = aws_opensearchserverless_collection.knowledge_base[0].arn
       vector_index_name = "bedrock-knowledge-base-default-index"
       field_mapping {
         vector_field   = "embeddings"
@@ -243,13 +364,18 @@ resource "aws_bedrockagent_knowledge_base" "city_facts_simple" {
   
   tags = {
     Environment = "development"
-    Project     = var.project_name
+    Project     = local.full_project_name
   }
+
+  depends_on = [
+    null_resource.upload_knowledge_base_files,
+    null_resource.create_opensearch_vector_index
+  ]
 }
 
 # Data Source 1: Air Quality and Water Pollution CSV
 resource "aws_bedrockagent_data_source" "air_quality_data_simple" {
-  count             = var.knowledge_base_bucket_name != "" ? 1 : 0
+  count             = local.deploy_knowledge_base ? 1 : 0
   knowledge_base_id = aws_bedrockagent_knowledge_base.city_facts_simple[0].id
   name              = "city-air-quality-water-pollution"
   description       = "World cities air quality and water pollution data from 2021"
@@ -257,7 +383,7 @@ resource "aws_bedrockagent_data_source" "air_quality_data_simple" {
   data_source_configuration {
     type = "S3"
     s3_configuration {
-      bucket_arn = data.aws_s3_bucket.knowledge_base[0].arn
+      bucket_arn = local.knowledge_base_bucket_arn
       inclusion_prefixes = [
         "world_cities_air_quality_water_pollution_2021.csv"
       ]
@@ -279,7 +405,7 @@ resource "aws_bedrockagent_data_source" "air_quality_data_simple" {
 
 # Data Source 2: Cost of Living CSV
 resource "aws_bedrockagent_data_source" "cost_of_living_data_simple" {
-  count             = var.knowledge_base_bucket_name != "" ? 1 : 0
+  count             = local.deploy_knowledge_base ? 1 : 0
   knowledge_base_id = aws_bedrockagent_knowledge_base.city_facts_simple[0].id
   name              = "city-cost-of-living"
   description       = "World cities cost of living data from 2018"
@@ -287,7 +413,7 @@ resource "aws_bedrockagent_data_source" "cost_of_living_data_simple" {
   data_source_configuration {
     type = "S3"
     s3_configuration {
-      bucket_arn = data.aws_s3_bucket.knowledge_base[0].arn
+      bucket_arn = local.knowledge_base_bucket_arn
       inclusion_prefixes = [
         "world_cities_cost_of_living_2018.csv"
       ]
@@ -309,7 +435,7 @@ resource "aws_bedrockagent_data_source" "cost_of_living_data_simple" {
 
 # Associate Knowledge Base with Agent
 resource "aws_bedrockagent_agent_knowledge_base_association" "city_facts_kb_association_simple" {
-  count                = var.knowledge_base_bucket_name != "" ? 1 : 0
+  count                = local.deploy_knowledge_base ? 1 : 0
   agent_id             = aws_bedrockagent_agent.city_facts_agent.agent_id
   agent_version        = "DRAFT"
   knowledge_base_id    = aws_bedrockagent_knowledge_base.city_facts_simple[0].id

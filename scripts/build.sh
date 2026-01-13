@@ -8,14 +8,14 @@ mkdir -p build_direct build_agent
 
 # Build direct model access Lambda
 echo "Building direct model access Lambda..."
-cp lambda_src/index.py build_direct/
+cp src/lambda_direct/index.py build_direct/
 cd build_direct
 zip -r ../city_facts_direct.zip .
 cd ..
 
 # Build agent-based Lambda
 echo "Building agent-based Lambda..."
-cp lambda_agent_src/index.py build_agent/
+cp src/lambda_agent/index.py build_agent/
 cd build_agent
 zip -r ../city_facts_agent.zip .
 cd ..

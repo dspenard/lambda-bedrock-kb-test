@@ -10,7 +10,7 @@ echo "=============================================="
 echo ""
 
 # Check if terraform.tfstate exists
-if [ ! -f "terraform.tfstate" ]; then
+if [ ! -f "terraform/terraform.tfstate" ]; then
     echo "❌ No terraform.tfstate file found!"
     echo "   No Terraform-managed infrastructure to destroy."
     exit 1
@@ -24,7 +24,9 @@ echo ""
 
 # Show what will be destroyed
 echo "Resources to be destroyed:"
+cd terraform
 terraform show -json | jq -r '.values.root_module.resources[]?.address' 2>/dev/null | sort || echo "  (Unable to list resources)"
+cd ..
 echo ""
 
 # Confirm destruction
@@ -38,7 +40,9 @@ echo ""
 echo "🔥 Destroying Terraform infrastructure..."
 echo ""
 
+cd terraform
 terraform destroy -auto-approve
+cd ..
 
 if [ $? -eq 0 ]; then
     echo ""

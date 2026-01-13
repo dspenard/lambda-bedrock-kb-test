@@ -1,4 +1,5 @@
 import json
+import os
 import boto3
 from botocore.exceptions import ClientError
 
@@ -85,9 +86,21 @@ def handler(event, context):
                 })
             }
         
-        # Get agent configuration from environment variables or use the deployed agent ID
-        agent_id = "1DSXPQRXQJ"  # From Terraform output
-        agent_alias_id = "TSTALIASID"  # Default test alias
+        # Get agent configuration from environment variables
+        agent_id = os.environ.get('BEDROCK_AGENT_ID')
+        agent_alias_id = os.environ.get('BEDROCK_AGENT_ALIAS_ID', 'TSTALIASID')
+        
+        if not agent_id:
+            return {
+                "statusCode": 500,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": json.dumps({
+                    "error": "Configuration error",
+                    "message": "BEDROCK_AGENT_ID environment variable not set"
+                })
+            }
         session_id = context.aws_request_id  # Use request ID as session ID
         
         # Create input text for the agent that should trigger knowledge base usage

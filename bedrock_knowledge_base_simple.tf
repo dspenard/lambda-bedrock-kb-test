@@ -20,7 +20,8 @@ resource "aws_opensearchserverless_collection" "knowledge_base" {
 
   depends_on = [
     aws_opensearchserverless_security_policy.knowledge_base_encryption,
-    aws_opensearchserverless_security_policy.knowledge_base_network
+    aws_opensearchserverless_security_policy.knowledge_base_network,
+    aws_opensearchserverless_access_policy.knowledge_base
   ]
 }
 
@@ -272,6 +273,8 @@ resource "aws_bedrockagent_data_source" "air_quality_data_simple" {
       }
     }
   }
+
+  data_deletion_policy = "RETAIN"
 }
 
 # Data Source 2: Cost of Living CSV
@@ -300,6 +303,8 @@ resource "aws_bedrockagent_data_source" "cost_of_living_data_simple" {
       }
     }
   }
+
+  data_deletion_policy = "RETAIN"
 }
 
 # Associate Knowledge Base with Agent

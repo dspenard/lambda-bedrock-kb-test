@@ -101,7 +101,7 @@ resource "aws_bedrockagent_agent_action_group" "city_facts_action_group" {
   action_group_name            = "CityFactsActionGroup"
   description                  = "Action group that provides city facts by invoking Lambda function"
   prepare_agent                = true
-  skip_resource_in_use_check   = false
+  skip_resource_in_use_check   = true
   
   action_group_executor {
     lambda = aws_lambda_function.city_facts_direct.arn

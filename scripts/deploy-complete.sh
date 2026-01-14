@@ -5,7 +5,7 @@
 # 
 # Usage:
 #   ./deploy-complete.sh           # Deploy without prefix
-#   ./deploy-complete.sh jd        # Deploy with 'jd' prefix
+#   ./deploy-complete.sh dts       # Deploy with 'dts' prefix
 #   ./deploy-complete.sh dev       # Deploy with 'dev' prefix
 
 set -e
@@ -17,7 +17,7 @@ if [ $# -eq 1 ]; then
     # Validate prefix format
     if [[ ! $PREFIX =~ ^[a-z0-9]{1,3}$ ]]; then
         echo "❌ Invalid prefix format. Must be 1-3 lowercase alphanumeric characters."
-        echo "   Examples: 'jd', 'dev', 'sm1'"
+        echo "   Examples: 'dts', 'dev', 'sm1'"
         exit 1
     fi
     echo "🏷️  Using prefix: $PREFIX"

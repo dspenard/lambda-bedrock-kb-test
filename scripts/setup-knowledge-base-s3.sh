@@ -14,7 +14,7 @@ set -e
 #
 # Usage:
 #   ./setup-knowledge-base-s3.sh           # No prefix (default)
-#   ./setup-knowledge-base-s3.sh jd        # With developer initials
+#   ./setup-knowledge-base-s3.sh dts       # With developer initials
 #   ./setup-knowledge-base-s3.sh dev       # With environment name
 
 set -e
@@ -30,7 +30,7 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     echo ""
     echo "Examples:"
     echo "  $0           # Creates: bedrock-kb-xxxxxxxx"
-    echo "  $0 jd        # Creates: jd-bedrock-kb-xxxxxxxx"
+    echo "  $0 dts       # Creates: dts-bedrock-kb-xxxxxxxx"
     echo "  $0 dev       # Creates: dev-bedrock-kb-xxxxxxxx"
     echo "  $0 sm1       # Creates: sm1-bedrock-kb-xxxxxxxx"
     echo ""
@@ -46,7 +46,7 @@ if [ $# -eq 1 ]; then
     # Validate prefix format (1-3 lowercase alphanumeric characters)
     if [[ ! $PREFIX =~ ^[a-z0-9]{1,3}$ ]]; then
         echo "❌ Invalid prefix format. Must be 1-3 lowercase alphanumeric characters."
-        echo "   Examples: 'jd', 'dev', 'sm1'"
+        echo "   Examples: 'dts', 'dev', 'sm1'"
         echo "   Use '$0 --help' for more information."
         exit 1
     fi

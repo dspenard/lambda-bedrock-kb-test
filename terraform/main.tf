@@ -27,7 +27,7 @@ variable "aws_region" {
 }
 
 variable "resource_prefix" {
-  description = "Optional 3-character prefix for resource names to avoid collisions in shared AWS accounts. Common uses: developer initials (jd, sm, ak) or environment names (dev, stg, prd). Leave empty for no prefix."
+  description = "Optional 3-character prefix for resource names to avoid collisions in shared AWS accounts. Common uses: developer initials (dts, sm, ak) or environment names (dev, stg, prd). Leave empty for no prefix."
   type        = string
   default     = ""
   

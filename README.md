@@ -7,6 +7,8 @@ A simple, focused test environment for AWS Bedrock that demonstrates how to crea
 
 This project showcases two approaches: direct model access and agent-based architecture with knowledge base integration using OpenSearch Serverless vector storage.
 
+**Testing**: This is a backend-focused project. Testing is currently done by directly invoking Lambda functions via AWS CLI. No front-end interface exists at this time.
+
 ## 🎯 What This Demonstrates
 
 **Input**: City name (e.g., "Geneva", "Tokyo", "Berlin")
@@ -52,6 +54,8 @@ This project showcases two approaches: direct model access and agent-based archi
 ## 🏗️ Architecture Overview
 
 This project demonstrates **two distinct approaches** to using AWS Bedrock for generating city information:
+
+![Bedrock Architecture Comparison](./docs/bedrock-full-comparison.png)
 
 ### Approach 1: Direct Model Access (Simple)
 ```
@@ -1705,9 +1709,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔮 Next Steps
 
+- [ ] Add front-end interface (Streamlit, React, etc) with API Gateway integration to provide a user-friendly UI for querying city facts
+- [ ] Implement Bedrock Guardrails to filter inappropriate content and enforce safety policies
+- [ ] Explore multi-agent architecture where specialized agents handle different aspects (e.g., one for environmental data, one for cultural facts, etc)
 - [ ] Add more data sources to knowledge base
 - [ ] Implement conversation memory
-- [ ] Add API Gateway integration
 - [ ] Create additional action groups
 - [ ] Add monitoring and alerting
 - [ ] Implement automated testing pipeline

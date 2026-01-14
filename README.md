@@ -758,7 +758,7 @@ enable_knowledge_base = true     # Enable Terraform-managed S3
 Use the legacy setup script and reference existing bucket:
 
 ```bash
-./setup-knowledge-base-s3.sh dts  # Creates external S3 bucket
+./scripts/setup-knowledge-base-s3.sh dts  # Creates external S3 bucket
 # terraform.tfvars will be updated automatically
 ```
 
@@ -810,7 +810,7 @@ terraform apply
 ### Step 2: Knowledge Base S3 Setup
 ```bash
 # Create S3 bucket and upload knowledge base data
-./setup-knowledge-base-s3.sh
+./scripts/setup-knowledge-base-s3.sh
 
 # This script will:
 # - Create a uniquely named S3 bucket (bedrock-kb-xxxxxxxx)
@@ -819,7 +819,7 @@ terraform apply
 # - Create .kb-bucket-name as a backup reference
 
 # Verify upload
-./check-knowledge-base-s3.sh
+./scripts/check-knowledge-base-s3.sh
 ```
 
 ### Step 3: Deploy Knowledge Base Infrastructure
@@ -1064,7 +1064,7 @@ This project provides multiple teardown options depending on your needs. Choose 
 
 **Command:**
 ```bash
-./teardown-complete.sh
+./scripts/teardown-complete.sh
 ```
 
 **Interactive Process:**
@@ -1099,7 +1099,7 @@ This project provides multiple teardown options depending on your needs. Choose 
 
 **Command:**
 ```bash
-./teardown-infrastructure.sh
+./scripts/teardown-infrastructure.sh
 ```
 
 **Process:**
@@ -1131,7 +1131,7 @@ This project provides multiple teardown options depending on your needs. Choose 
 
 **Command:**
 ```bash
-./teardown-s3-only.sh
+./scripts/teardown-s3-only.sh
 ```
 
 **Process:**
@@ -1230,8 +1230,8 @@ terraform apply  # Uses existing S3 bucket
 
 **After S3-Only Teardown:**
 ```bash
-./setup-knowledge-base-s3.sh  # Recreate S3 bucket
-terraform apply                # Update knowledge base
+./scripts/setup-knowledge-base-s3.sh  # Recreate S3 bucket
+terraform apply                        # Update knowledge base
 ```
 
 ### Manual Testing Examples
@@ -1557,7 +1557,7 @@ aws s3api delete-objects --bucket $BUCKET_NAME \
 ```
 
 **Root Cause**: S3 buckets with versioning enabled require all versions to be deleted
-**Prevention**: Use `./teardown-complete.sh` which handles this automatically
+**Prevention**: Use `./scripts/teardown-complete.sh` which handles this automatically
 
 #### 3. OpenSearch Access Denied
 **Problem**: "Access denied to create index" or "403 Forbidden" when accessing OpenSearch
@@ -1753,7 +1753,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ./scripts/dev-workflow.sh status
 
 # 🔥 Complete teardown
-./teardown-complete.sh
+./scripts/teardown-complete.sh
 ```
 
 ### 🛠️ Development Operations
@@ -1783,25 +1783,25 @@ cd terraform && terraform apply && cd ..
 ### 🗂️ Legacy Operations (External S3)
 ```bash
 # 📦 Setup external S3 bucket
-./setup-knowledge-base-s3.sh dts
+./scripts/setup-knowledge-base-s3.sh dts
 
 # 🔍 Check S3 status
-./check-knowledge-base-s3.sh
+./scripts/check-knowledge-base-s3.sh
 
 # 🧹 S3 cleanup only
-./teardown-s3-only.sh
+./scripts/teardown-s3-only.sh
 ```
 
 ### 🔥 Teardown Options
 ```bash
 # Scenario 1: Done with project permanently
-./teardown-complete.sh
+./scripts/teardown-complete.sh
 
 # Scenario 2: Pause project, keep data
-./teardown-infrastructure.sh
+./scripts/teardown-infrastructure.sh
 
 # Scenario 3: Clean data, keep infrastructure  
-./teardown-s3-only.sh
+./scripts/teardown-s3-only.sh
 
 # Scenario 4: Emergency cleanup
 terraform destroy

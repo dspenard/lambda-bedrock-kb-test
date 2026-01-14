@@ -1,6 +1,30 @@
 # Bedrock Agent Test Bed with Knowledge Base
 
-A comprehensive test environment for AWS Lambda functions integrated with Bedrock agents and knowledge bases, featuring both direct model access and agent-based architectures with OpenSearch Serverless vector storage.
+A simple, focused test environment for AWS Bedrock that demonstrates how to create a Bedrock agent with a small knowledgebase to supplement the model with information available about a given city.  Users provide a city name, and Bedrock returns 10 interesting facts by combining:
+- **General knowledge** from Claude 3.5 Haiku foundation model
+- **Real-world data** from a knowledge base (air quality, water pollution, cost of living)
+- **Action groups** that invoke Lambda functions for additional processing
+
+This project showcases two approaches: direct model access and agent-based architecture with knowledge base integration using OpenSearch Serverless vector storage.
+
+## 🎯 What This Demonstrates
+
+**Input**: City name (e.g., "Geneva", "Tokyo", "Berlin")
+
+**Output**: 10 key facts about the city including:
+- Historical significance and founding
+- Cultural landmarks and traditions
+- Environmental data (air quality, water pollution) from knowledge base
+- Economic information (cost of living) from knowledge base
+- Population, geography, and interesting trivia
+
+**Key AWS Services Tested**:
+- AWS Bedrock (Claude 3.5 Haiku model)
+- Bedrock Agents with Action Groups
+- Bedrock Knowledge Base with vector search
+- OpenSearch Serverless for vector storage
+- Lambda functions for custom logic
+- S3 for knowledge base data storage
 
 ## 📚 Table of Contents
 
@@ -10,6 +34,7 @@ A comprehensive test environment for AWS Lambda functions integrated with Bedroc
 - [Configuration](#️-configuration)
 - [Quick Start Deployment](#-quick-start-deployment)
 - [Testing](#-testing)
+- [API Documentation](#-api-documentation)
 - [Development Workflow](#️-development-workflow)
 - [Teardown and Cleanup](#-teardown-and-cleanup)
 - [Project Structure](#-project-structure)
@@ -26,39 +51,154 @@ A comprehensive test environment for AWS Lambda functions integrated with Bedroc
 
 ## 🏗️ Architecture Overview
 
-### Complete System Architecture
+This project demonstrates **two distinct approaches** to using AWS Bedrock for generating city information:
+
+### Approach 1: Direct Model Access (Simple)
 ```
 ┌─────────────────┐
-│   User Request  │
+│   User Input    │
+│ {"city":"Tokyo"}│
 └─────────┬───────┘
           │
           ▼
-┌─────────────────┐
-│ Lambda (Agent)  │
-└─────────┬───────┘
+┌─────────────────────────────────────────────────────────┐
+│         Lambda Direct (lambda_direct)                   │
+│  • Receives city name                                   │
+│  • Constructs prompt                                    │
+│  • Calls bedrock-runtime.invoke_model()                 │
+└─────────┬───────────────────────────────────────────────┘
           │
           ▼
-┌─────────────────┐    ┌──────────────────┐
-│ Bedrock Agent   │◄──►│ Knowledge Base   │
-│ (Claude 3 Haiku)│    │ (OpenSearch)     │
-└─────────┬───────┘    └──────────────────┘
-          │                      ▲
-          ▼                      │
-┌─────────────────┐    ┌──────────────────┐
-│  Action Group   │    │   S3 Data        │
-└─────────┬───────┘    │ • Air Quality    │
-          │            │ • Cost of Living │
-          ▼            └──────────────────┘
-┌─────────────────┐
-│ Lambda (Direct) │
-│ Claude 3 Haiku  │
-└─────────┬───────┘
+┌─────────────────────────────────────────────────────────┐
+│         Claude 3.5 Haiku Foundation Model               │
+│  • Processes prompt                                     │
+│  • Generates 10 city facts using large language model   │
+└─────────┬───────────────────────────────────────────────┘
           │
           ▼
 ┌─────────────────┐
-│    Response     │
+│   Response      │
+│ • 10 facts      │
+│ • General info  │
 └─────────────────┘
 ```
+
+### Approach 2: Agent-Based with Knowledge Base (Advanced)
+```
+┌─────────────────┐
+│   User Input    │
+│{"city":"Geneva"}│
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────┐
+│         Lambda Agent (lambda_agent)                     │
+│  • Receives city name                                   │
+│  • Constructs detailed prompt                           │
+│  • Calls bedrock-agent-runtime.invoke_agent()           │
+└─────────┬───────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────┐
+│         Bedrock Agent (Claude 3.5 Haiku)                │
+│  • Orchestrates multiple data sources                   │
+│  • Plans response strategy                              │
+│  • Decides which tools to use based on prompt           │
+└─────────┬───────────────────┬───────────────────────────┘
+          │                   │
+          │                   ▼
+          │        ┌──────────────────────────────────┐
+          │        │     Knowledge Base               │
+          │        │  (OpenSearch Serverless)         │
+          │        │                                  │
+          │        │ • Vector search for city data    │
+          │        │ • Air quality (500+ cities)      │
+          │        │ • Water pollution metrics        │
+          │        │ • Cost of living (400+ cities)   │
+          │        │ • Associated with agent          │
+          │        └──────────┬───────────────────────┘
+          │                   │
+          │                   ▼
+          │        ┌──────────────────┐
+          │        │   S3 Bucket      │
+          │        │ • CSV datasets   │
+          │        │ • Vector indexed │
+          │        └──────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────┐
+│    Action Group: /city-facts API (Internal)             │
+│  • Agent calls POST /city-facts internally              │
+│  • Defined by OpenAPI spec in agent config              │
+│  • Executor: lambda_direct function                     │
+│  • NOT called directly by users                         │
+└─────────┬───────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────┐
+│         Lambda Direct (as Action Group)                 │
+│  • Invoked by agent via action group                    │
+│  • Gets general city facts from model                   │
+│  • Returns structured data to agent                     │
+└─────────┬───────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────┐
+│         Agent Synthesizes Response                      │
+│  • Combines knowledge base data                         │
+│  • Integrates action group results                      │
+│  • Generates coherent narrative                         │
+└─────────┬───────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────┐
+│   Response      │
+│ • 10 facts      │
+│ • KB data       │
+│ • General info  │
+└─────────────────┘
+```
+
+### Key Differences
+
+| Feature | Direct Model Access | Agent-Based |
+|---------|-------------------|-------------|
+| **Lambda Function** | `lambda_direct` | `lambda_agent` |
+| **Bedrock API** | `invoke_model()` | `invoke_agent()` |
+| **Data Sources** | Large language model only | Model + Knowledge Base + Action Groups |
+| **Complexity** | Simple, single API call | Orchestrated, multi-source |
+| **Knowledge Base** | ❌ No | ✅ Yes (OpenSearch, associated with agent) |
+| **Action Groups** | ❌ No | ✅ Yes (`/city-facts` API, internal only) |
+| **Real-time Data** | ❌ No | ✅ Yes (from CSV datasets) |
+| **Use Case** | Baseline testing | Full Bedrock capabilities |
+| **API Invocation** | Direct Lambda call | Agent orchestrates internal APIs |
+
+### How Each Approach Works
+
+**Direct Model Access:**
+1. User provides city name → `{"city": "Tokyo"}`
+2. Lambda constructs prompt → "Provide 10 facts about Tokyo"
+3. Calls Bedrock Runtime → `invoke_model()` with Claude 3.5 Haiku
+4. Model generates response → Using large language model
+5. Returns 10 facts → General knowledge only
+
+**Agent-Based:**
+1. User provides city name → `{"city": "Geneva"}`
+2. Lambda constructs prompt → "Tell me about Geneva, including air quality, water pollution, and cost of living"
+3. Calls Bedrock Agent → `invoke_agent()` 
+4. Agent orchestrates (automatically decides which tools to use):
+   - **Knowledge Base Search** → Agent queries OpenSearch for Geneva data (air quality, water pollution, cost of living)
+     - Knowledge base is **associated with the agent** via Terraform configuration
+     - Agent has IAM permissions to call `bedrock:Retrieve`
+   - **Action Group Call** → Agent internally calls `POST /city-facts` API
+     - This API is defined in the agent's OpenAPI specification
+     - The API is **not called directly by users** - only by the agent
+     - Executor is `lambda_direct` function
+     - Returns general city facts from the model
+5. Agent synthesizes → Combines knowledge base data + action group results
+6. Returns comprehensive response → KB data + general facts
+
+**Key Insight**: The `/city-facts` API is an **internal tool** for the agent. Users never call it directly - they call `lambda_agent`, which invokes the Bedrock Agent, which then decides to use the `/city-facts` action group as one of its tools.
 
 ## 📋 Prerequisites and Requirements
 
@@ -464,7 +604,7 @@ cp terraform.tfvars.example terraform.tfvars
 
 # Edit with your preferences
 # terraform.tfvars (git-ignored)
-resource_prefix = "jd"                                    # Your 3-char prefix (optional)
+resource_prefix = "dts"                                   # Your 3-char prefix (optional)
 enable_knowledge_base = true                              # Enable Terraform-managed S3 & knowledge base
 include_current_user_in_opensearch_access = true          # Include current user in OpenSearch access (default: true)
 ```
@@ -473,7 +613,7 @@ include_current_user_in_opensearch_access = true          # Include current user
 
 | Prefix | Use Case | Example Resources |
 |--------|----------|-------------------|
-| `jd` | Developer initials | `jd-bedrock-agent-testbed-city-facts-direct` |
+| `dts` | Developer initials | `dts-bedrock-agent-testbed-city-facts-direct` |
 | `dev` | Development environment | `dev-bedrock-agent-testbed-city-facts-direct` |
 | `stg` | Staging environment | `stg-bedrock-agent-testbed-city-facts-direct` |
 | _(none)_ | Default/production | `bedrock-agent-testbed-city-facts-direct` |
@@ -534,7 +674,7 @@ cd bedrock-agent-testbed
 ./scripts/deploy-complete.sh
 
 # OR deploy with a 3-character prefix for multi-developer environments
-./scripts/deploy-complete.sh jd   # Using your initials
+./scripts/deploy-complete.sh dts  # Using your initials
 ./scripts/deploy-complete.sh dev  # Using environment name
 ```
 
@@ -556,7 +696,7 @@ This project supports optional 3-character prefixes to avoid resource name colli
 
 ```bash
 # Deploy with developer initials
-./scripts/deploy-complete.sh jd    # Creates: jd-bedrock-agent-testbed-*
+./scripts/deploy-complete.sh dts   # Creates: dts-bedrock-agent-testbed-*
 
 # Deploy with environment name  
 ./scripts/deploy-complete.sh dev   # Creates: dev-bedrock-agent-testbed-*
@@ -602,7 +742,7 @@ Set `enable_knowledge_base = true` in your `terraform.tfvars`:
 
 ```hcl
 # terraform.tfvars
-resource_prefix = "jd"           # Optional 3-char prefix
+resource_prefix = "dts"          # Optional 3-char prefix
 enable_knowledge_base = true     # Enable Terraform-managed S3
 ```
 
@@ -610,7 +750,7 @@ enable_knowledge_base = true     # Enable Terraform-managed S3
 Use the legacy setup script and reference existing bucket:
 
 ```bash
-./setup-knowledge-base-s3.sh jd  # Creates external S3 bucket
+./setup-knowledge-base-s3.sh dts  # Creates external S3 bucket
 # terraform.tfvars will be updated automatically
 ```
 
@@ -806,15 +946,88 @@ The testing scripts automatically detect your resource prefix and use the correc
 All scripts automatically detect your prefix from `terraform.tfvars`:
 
 ```bash
-# If terraform.tfvars contains: resource_prefix = "jd"
+# If terraform.tfvars contains: resource_prefix = "dts"
 ./test-lambda.sh both Geneva
-# → Tests: jd-bedrock-agent-testbed-city-facts-direct
-# → Tests: jd-bedrock-agent-testbed-city-facts-agent
+# → Tests: dts-bedrock-agent-testbed-city-facts-direct
+# → Tests: dts-bedrock-agent-testbed-city-facts-agent
 
 # Without prefix
 ./test-lambda.sh both Geneva  
 # → Tests: bedrock-agent-testbed-city-facts-direct
 # → Tests: bedrock-agent-testbed-city-facts-agent
+```
+
+## 📖 API Documentation
+
+### Complete API Specification
+
+For comprehensive API documentation including OpenAPI specifications, request/response examples, and integration patterns, see:
+
+**[📄 docs/API.md](docs/API.md)**
+
+The API documentation includes:
+- **OpenAPI 3.0 Specification** for the City Facts Action Group API
+- **Request/Response Examples** for both Lambda functions
+- **Error Handling** patterns and common error codes
+- **Integration Examples** in Python and Node.js
+- **Usage Patterns** for different testing scenarios
+- **Rate Limits and Best Practices**
+
+### Quick API Reference
+
+#### Lambda Direct (Simple Model Access)
+
+**Input**:
+```json
+{"city": "Tokyo"}
+```
+
+**Output**:
+```json
+{
+  "city": "Tokyo",
+  "facts": ["fact 1", "fact 2", ...],
+  "total_facts": 10,
+  "message": "Here are facts about Tokyo generated by Claude 3 Haiku!",
+  "model_used": "anthropic.claude-3-haiku-20240307-v1:0"
+}
+```
+
+#### Lambda Agent (Agent-Based with Knowledge Base)
+
+**Input**:
+```json
+{"city": "Geneva"}
+```
+
+**Output**:
+```json
+{
+  "city": "Geneva",
+  "agent_response": "Here is what I can share about Geneva:\n\nBased on the search results, Geneva has an air quality index of 20.17...",
+  "message": "City facts for Geneva generated via Bedrock Agent",
+  "agent_id": "137GJDIGTS",
+  "session_id": "unique-session-id",
+  "source": "bedrock_agent"
+}
+```
+
+### Testing Commands
+
+```bash
+# Test direct Lambda
+aws lambda invoke \
+  --function-name bedrock-agent-testbed-city-facts-direct \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"city": "Tokyo"}' \
+  response.json
+
+# Test agent Lambda
+aws lambda invoke \
+  --function-name bedrock-agent-testbed-city-facts-agent \
+  --cli-binary-format raw-in-base64-out \
+  --payload '{"city": "Geneva"}' \
+  response.json
 ```
 
 ## 🔥 Teardown and Cleanup
@@ -1122,7 +1335,7 @@ The new approach eliminates most manual steps:
 
 ```bash
 # Complete deployment (includes S3, files, and knowledge base)
-./scripts/deploy-complete.sh jd
+./scripts/deploy-complete.sh dts
 
 # Update Lambda code only (auto-detects prefix)
 ./scripts/deploy-lambda.sh
@@ -1262,7 +1475,7 @@ terraform apply
 
 ```bash
 # Complete deployment (from project root)
-./scripts/deploy-complete.sh jd
+./scripts/deploy-complete.sh dts
 
 # Update Lambda code only
 ./scripts/deploy-lambda.sh
@@ -1470,6 +1683,17 @@ aws bedrock-agent list-ingestion-jobs \
 ✅ **Comprehensive IAM**: Proper permissions for all components  
 ✅ **Development Tools**: Scripts for rapid deployment and testing  
 ✅ **Error Handling**: Graceful handling of missing data  
+✅ **Internal Action Group API**: `/city-facts` API for agent orchestration (not user-facing)
+
+### 🔑 Key Architectural Concepts
+
+**Knowledge Base Association**: The knowledge base is associated with the Bedrock Agent via Terraform, giving the agent automatic access to search it. The `lambda_direct` function does not have direct knowledge base access - only the agent does.
+
+**Action Group API**: The `/city-facts` API is an internal tool defined in the agent's OpenAPI specification. Users never call it directly - only the Bedrock Agent calls it as part of its orchestration process.
+
+**Two Invocation Paths**:
+- **Direct**: User → `lambda_direct` → Model → Response (no KB)
+- **Agent**: User → `lambda_agent` → Agent → (KB search + `/city-facts` call) → Synthesized Response  
 
 ## 🤝 Contributing
 
@@ -1501,7 +1725,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### 🎯 New Deployment (Terraform-Managed S3)
 ```bash
 # 🏗️ Deploy everything with prefix
-./deploy-complete.sh jd
+./deploy-complete.sh dts
 
 # 🧪 Test functions (auto-detects prefix)
 ./test-lambda.sh both Geneva
@@ -1543,7 +1767,7 @@ cd terraform && terraform apply && cd ..
 ### 🗂️ Legacy Operations (External S3)
 ```bash
 # 📦 Setup external S3 bucket
-./setup-knowledge-base-s3.sh jd
+./setup-knowledge-base-s3.sh dts
 
 # 🔍 Check S3 status
 ./check-knowledge-base-s3.sh

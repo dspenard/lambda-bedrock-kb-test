@@ -52,7 +52,7 @@ variable "knowledge_base_bucket_name" {
 variable "enable_knowledge_base" {
   description = "Enable knowledge base deployment with Terraform-managed S3 bucket"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "include_current_user_in_opensearch_access" {

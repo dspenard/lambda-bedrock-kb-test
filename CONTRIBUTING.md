@@ -20,8 +20,7 @@ Thank you for your interest in contributing to this project! This guide will hel
 ### Local Development
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/bedrock-agent-testbed.git
-cd bedrock-agent-testbed
+git clone https://github.com/your-username/lambda-bedrock-kb-test.git && cd lambda-bedrock-kb-test
 
 # Make your changes
 # Test your changes using the provided scripts

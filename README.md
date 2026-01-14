@@ -667,19 +667,18 @@ include_current_user_in_opensearch_access = true   # Default: true
 
 ### 🎯 New Simplified Deployment (Recommended)
 
-The easiest way to deploy everything with Terraform-managed S3 and automatic file uploads:
+The easiest way to deploy everything, including Terraform-managed S3 and automatic file uploads of sample city data needed for the knowledge base:
 
 ```bash
 # Clone and navigate to the project
-git clone https://github.com/your-username/bedrock-agent-testbed.git
-cd bedrock-agent-testbed
+git clone https://github.com/dspenard/lambda-bedrock-kb-test.git && cd lambda-bedrock-kb-test
 
 # Deploy everything with one command (no prefix)
 ./scripts/deploy-complete.sh
 
 # OR deploy with a 3-character prefix for multi-developer environments
-./scripts/deploy-complete.sh dts  # Using your initials
-./scripts/deploy-complete.sh dev  # Using environment name
+# ./scripts/deploy-complete.sh dts  # Using your initials
+# ./scripts/deploy-complete.sh dev  # Using environment name
 ```
 
 This single command will:
@@ -722,8 +721,7 @@ For a completely automated deployment, use the provided script:
 
 ```bash
 # Clone and navigate to the project
-git clone https://github.com/your-username/bedrock-agent-testbed.git
-cd bedrock-agent-testbed
+git clone https://github.com/dspenard/lambda-bedrock-kb-test.git && cd lambda-bedrock-kb-test
 
 # Run the complete deployment script
 ./scripts/deploy-complete.sh
@@ -794,8 +792,7 @@ This project uses several configuration files:
 ### Step 1: Initial Infrastructure Setup
 ```bash
 # Clone and navigate to the project
-git clone https://github.com/your-username/bedrock-agent-testbed.git
-cd bedrock-agent-testbed
+git clone https://github.com/dspenard/lambda-bedrock-kb-test.git && cd lambda-bedrock-kb-test
 
 # Initialize Terraform
 terraform init

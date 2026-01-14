@@ -598,9 +598,15 @@ aws opensearchserverless list-collections --region us-east-1
 
 ## ⚙️ Configuration
 
-### 🔧 terraform.tfvars Setup
+### 🔧 terraform.tfvars Setup (Optional)
 
-Create your personal configuration file:
+The `terraform.tfvars` file is **optional**. Terraform will use sensible defaults if this file doesn't exist:
+- No resource prefix (resources named `bedrock-agent-testbed-*`)
+- **Knowledge base ENABLED by default** with Terraform-managed S3 bucket
+- Region: us-east-1
+- OpenSearch access includes current user
+
+To customize your deployment, create a configuration file:
 
 ```bash
 # Copy the example file
@@ -609,7 +615,7 @@ cp terraform.tfvars.example terraform.tfvars
 # Edit with your preferences
 # terraform.tfvars (git-ignored)
 resource_prefix = "dts"                                   # Your 3-char prefix (optional)
-enable_knowledge_base = true                              # Enable Terraform-managed S3 & knowledge base
+enable_knowledge_base = true                              # Enable Terraform-managed S3 & knowledge base (default: true)
 include_current_user_in_opensearch_access = true          # Include current user in OpenSearch access (default: true)
 ```
 
@@ -626,9 +632,9 @@ include_current_user_in_opensearch_access = true          # Include current user
 
 | Option | Configuration | S3 Management | Use Case |
 |--------|---------------|---------------|----------|
-| **Terraform-Managed** | `enable_knowledge_base = true` | Automatic | New deployments (recommended) |
+| **Terraform-Managed** (Default) | `enable_knowledge_base = true` | Automatic | New deployments (recommended, enabled by default) |
 | **External S3** | `knowledge_base_bucket_name = "bucket"` | Manual scripts | Legacy/existing buckets |
-| **Core Only** | _(neither set)_ | None | Lambda + Agent only |
+| **Core Only** | `enable_knowledge_base = false` | None | Lambda + Agent only (no KB) |
 
 ### 🔐 OpenSearch Access Configuration
 
@@ -1445,6 +1451,9 @@ terraform apply
 │       ├── world_cities_air_quality_water_pollution_2021.csv
 │       ├── world_cities_cost_of_living_2018.csv
 │       └── README.md
+├── docs/                             # 📖 Documentation
+│   ├── API.md                        # Complete API documentation with OpenAPI specs
+│   └── bedrock-full-comparison.png   # Architecture diagram
 ├── .kb-bucket-name                   # 📝 S3 bucket name reference (legacy)
 ├── *.zip                             # Generated Lambda packages (git-ignored)
 ├── test_*.json                       # Generated test results (git-ignored)
@@ -1455,7 +1464,7 @@ terraform apply
 
 **📁 terraform/** - Infrastructure as Code
 - All Terraform configuration files
-- Your personal `terraform.tfvars` settings
+- Your personal `terraform.tfvars` settings (optional - has defaults)
 - **CRITICAL**: `terraform.tfstate` file (never delete!)
 
 **📁 scripts/** - Automation and Management
@@ -1471,6 +1480,10 @@ terraform apply
 **📁 data/** - Test Data and Knowledge Base
 - `lambda-tests/` - JSON payloads for testing
 - `knowledge-base/` - CSV files for vector database
+
+**📁 docs/** - Documentation
+- `API.md` - Complete API documentation with OpenAPI specifications
+- `bedrock-full-comparison.png` - Architecture diagram
 
 ### 🚀 Quick Start Commands
 

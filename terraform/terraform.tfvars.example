@@ -9,8 +9,9 @@
 # resource_prefix = ""     # No prefix (default)
 
 # Knowledge Base Configuration
-# Option 1: Use Terraform-managed S3 bucket (recommended for new deployments)
-# enable_knowledge_base = true
+# By default, knowledge base is ENABLED with Terraform-managed S3 bucket
+# To disable knowledge base deployment, uncomment the line below:
+# enable_knowledge_base = false
 
 # Option 2: Use existing S3 bucket (for legacy deployments)
 # This is automatically set by the setup-knowledge-base-s3.sh script

@@ -10,7 +10,7 @@ PREFIX=""
 FULL_PROJECT_NAME="bedrock-agent-testbed"
 
 if [ -f "terraform/terraform.tfvars" ]; then
-    PREFIX=$(grep -E '^resource_prefix\s*=' terraform/terraform.tfvars 2>/dev/null | sed 's/.*=\s*"\([^"]*\)".*/\1/' || echo "")
+    PREFIX=$(grep '^resource_prefix' terraform/terraform.tfvars 2>/dev/null | cut -d'"' -f2 || echo "")
     if [ -n "$PREFIX" ]; then
         FULL_PROJECT_NAME="${PREFIX}-bedrock-agent-testbed"
     fi

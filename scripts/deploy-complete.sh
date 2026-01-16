@@ -261,6 +261,7 @@ echo "🧪 Step 7: Testing the deployment..."
 cd terraform
 AGENT_FUNCTION=$(terraform output -raw lambda_function_agent_name)
 DIRECT_FUNCTION=$(terraform output -raw lambda_function_direct_name)
+ENABLE_FRONTEND=$(terraform output -raw enable_frontend 2>/dev/null || echo "false")
 cd ..
 
 echo "   Testing direct Lambda function..."
@@ -290,6 +291,94 @@ else
 fi
 
 echo ""
+
+# Step 8: Setup frontend if enabled
+if [ "$ENABLE_FRONTEND" = "true" ]; then
+    echo "🎨 Step 8: Setting up frontend..."
+    
+    # Check if Node.js is installed
+    if ! command_exists node; then
+        echo "   ⚠️  Node.js is not installed. Skipping frontend setup."
+        echo "   Install Node.js to use the React frontend: https://nodejs.org/"
+    elif ! command_exists npm; then
+        echo "   ⚠️  npm is not installed. Skipping frontend setup."
+    else
+        echo "   📦 Installing frontend dependencies..."
+        cd frontend
+        
+        if npm install > /dev/null 2>&1; then
+            echo "   ✅ Frontend dependencies installed"
+            
+            # Update aws-config.js with Cognito values
+            cd ../terraform
+            USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
+            CLIENT_ID=$(terraform output -raw cognito_client_id)
+            cd ..
+            
+            echo "   ⚙️  Updating frontend configuration..."
+            cat > frontend/src/aws-config.js << EOF
+const awsConfig = {
+  Auth: {
+    Cognito: {
+      userPoolId: '${USER_POOL_ID}',
+      userPoolClientId: '${CLIENT_ID}',
+      loginWith: {
+        email: true,
+      },
+      signUpVerificationMethod: 'code',
+      userAttributes: {
+        email: {
+          required: true,
+        },
+      },
+      allowGuestAccess: false,
+      passwordFormat: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireNumbers: true,
+        requireSpecialCharacters: false,
+      },
+    },
+  },
+};
+
+export default awsConfig;
+EOF
+            echo "   ✅ Frontend configuration updated"
+            
+            # Update API URL in App.js
+            cd terraform
+            API_URL=$(terraform output -raw api_gateway_url)
+            cd ..
+            
+            sed -i.bak "s|const API_BASE_URL = '.*'|const API_BASE_URL = '${API_URL}'|" frontend/src/App.js
+            rm -f frontend/src/App.js.bak
+            
+            echo "   ✅ API Gateway URL configured"
+            echo ""
+            echo "   🌐 Frontend is ready! To start the development server:"
+            echo "      cd frontend && npm start"
+            echo ""
+            echo "   📝 Create a user account:"
+            echo "      1. Open http://localhost:3000 in your browser"
+            echo "      2. Click 'Create Account'"
+            echo "      3. Enter email and password"
+            echo "      4. Verify email with the code sent to your inbox"
+        else
+            echo "   ❌ Failed to install frontend dependencies"
+            echo "   You can manually install later with: cd frontend && npm install"
+        fi
+        
+        cd ..
+    fi
+else
+    echo "ℹ️  Step 8: Frontend deployment is disabled (enable_frontend = false)"
+    echo "   To enable frontend, set enable_frontend = true in terraform/terraform.tfvars"
+    echo "   See docs/FRONTEND_DEPLOYMENT.md for details"
+fi
+
+echo ""
 echo "🎉 DEPLOYMENT COMPLETE!"
 echo ""
 echo "📋 Summary:"
@@ -298,8 +387,24 @@ echo "   • Bedrock Agent: ✅ Created with action groups"
 echo "   • Knowledge Base: ✅ Created with OpenSearch Serverless"
 echo "   • Data Sources: ✅ Ingested (air quality + cost of living)"
 echo "   • S3 Bucket: ✅ Created and populated"
+
+if [ "$ENABLE_FRONTEND" = "true" ]; then
+    echo "   • API Gateway: ✅ Deployed with rate limiting"
+    echo "   • Cognito: ✅ User pool configured"
+    echo "   • React Frontend: ✅ Dependencies installed and configured"
+fi
+
 echo ""
 echo "🧪 Test Commands:"
+
+if [ "$ENABLE_FRONTEND" = "true" ]; then
+    echo "   # Test via React frontend (recommended):"
+    echo "   cd frontend && npm start"
+    echo "   # Then open http://localhost:3000 and sign in"
+    echo ""
+    echo "   # Or test via AWS CLI:"
+fi
+
 echo "   # Test direct model access:"
 echo "   aws lambda invoke --function-name $DIRECT_FUNCTION --cli-binary-format raw-in-base64-out --payload '{\"city\": \"Geneva\"}' response.json"
 echo ""
@@ -315,4 +420,11 @@ cd terraform
 terraform output
 cd ..
 echo ""
-echo "✨ Your Bedrock Agent Test Bed with Knowledge Base is ready to use!"
+
+if [ "$ENABLE_FRONTEND" = "true" ]; then
+    echo "✨ Your Bedrock Agent Test Bed with Knowledge Base and Frontend is ready to use!"
+else
+    echo "✨ Your Bedrock Agent Test Bed with Knowledge Base is ready to use!"
+    echo "   To enable the React frontend, set enable_frontend = true in terraform/terraform.tfvars"
+    echo "   See docs/FRONTEND_DEPLOYMENT.md for details"
+fi

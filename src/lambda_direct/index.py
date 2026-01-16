@@ -154,7 +154,10 @@ def handler(event, context):
                 return {
                     "statusCode": 400,
                     "headers": {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Allow-Headers": "Content-Type",
+                        "Access-Control-Allow-Methods": "POST,OPTIONS"
                     },
                     "body": json.dumps(error_response)
                 }
@@ -197,8 +200,34 @@ def handler(event, context):
                 else:
                     raise ValueError("No JSON found")
             except (json.JSONDecodeError, ValueError):
-                # Final fallback - split the response into lines as facts
-                facts = [line.strip() for line in claude_response.split('\n') if line.strip()][:10]
+                # Final fallback - extract numbered facts from text
+                facts = []
+                lines = claude_response.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    # Skip empty lines, JSON formatting characters, and very short lines
+                    if not line or len(line) <= 3:
+                        continue
+                    # Skip all JSON syntax characters and patterns
+                    if line in ['{', '}', '[', ']', ',', '",', '"', '":"', '"facts":', '"city":']:
+                        continue
+                    # Skip lines that look like JSON structure
+                    if line.startswith('{') or line.endswith('}') or line.startswith('[') or line.endswith(']'):
+                        continue
+                    if line.endswith(':') or line.endswith('": [') or line.endswith('",') or line.endswith('"'):
+                        continue
+                    # Skip lines that are just field names
+                    if line.startswith('"') and '":' in line:
+                        continue
+                    # Remove leading numbers, bullets, quotes, and commas
+                    cleaned = line.lstrip('0123456789.-) ').strip('"').strip(',').strip()
+                    # Additional cleanup - remove any remaining quotes or brackets
+                    cleaned = cleaned.replace('{', '').replace('}', '').replace('[', '').replace(']', '').strip()
+                    # Only add substantial content (more than 20 chars, contains letters)
+                    if cleaned and len(cleaned) > 20 and any(c.isalpha() for c in cleaned):
+                        facts.append(cleaned)
+                # Limit to 10 facts
+                facts = facts[:10]
         
         success_response = {
             "city": normalized_city,
@@ -230,7 +259,10 @@ def handler(event, context):
             return {
                 "statusCode": 200,
                 "headers": {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "POST,OPTIONS"
                 },
                 "body": json.dumps(success_response)
             }
@@ -262,7 +294,10 @@ def handler(event, context):
             return {
                 "statusCode": 500,
                 "headers": {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "POST,OPTIONS"
                 },
                 "body": json.dumps(error_response)
             }

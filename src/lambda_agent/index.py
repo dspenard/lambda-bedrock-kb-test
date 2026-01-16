@@ -73,7 +73,10 @@ def handler(event, context):
             return {
                 "statusCode": 400,
                 "headers": {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "POST,OPTIONS"
                 },
                 "body": json.dumps({
                     "error": "Missing city parameter",
@@ -94,7 +97,10 @@ def handler(event, context):
             return {
                 "statusCode": 500,
                 "headers": {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "POST,OPTIONS"
                 },
                 "body": json.dumps({
                     "error": "Configuration error",
@@ -103,8 +109,17 @@ def handler(event, context):
             }
         session_id = context.aws_request_id  # Use request ID as session ID
         
-        # Create input text for the agent that should trigger knowledge base usage
-        input_text = f"Tell me about {city_name.strip()}, including any available data about air quality, water pollution, and cost of living. Please use both general knowledge and any specific data you have access to."
+        # Create input text for the agent that requests structured output with KB data
+        input_text = f"""Please provide exactly 10 interesting facts about {city_name.strip()}. 
+
+Format your response as a numbered list (1. 2. 3. etc.) with each fact on a new line.
+
+Include a mix of:
+- General historical, cultural, and geographical facts
+- Specific data from your knowledge base about air quality, water pollution, and cost of living if available
+- Modern facts about the city
+
+If you have knowledge base data for this city, make sure to include those specific metrics in your facts."""
         
         # Invoke the Bedrock agent
         agent_response = invoke_bedrock_agent(agent_id, agent_alias_id, session_id, input_text)
@@ -113,7 +128,10 @@ def handler(event, context):
         response = {
             "statusCode": 200,
             "headers": {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "POST,OPTIONS"
             },
             "body": json.dumps({
                 "city": city_name.strip().title(),
@@ -133,7 +151,10 @@ def handler(event, context):
         return {
             "statusCode": 500,
             "headers": {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "POST,OPTIONS"
             },
             "body": json.dumps({
                 "error": "Internal server error",

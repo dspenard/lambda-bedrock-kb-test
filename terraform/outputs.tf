@@ -67,3 +67,46 @@ output "s3_knowledge_base_bucket" {
   description = "Name of the S3 bucket containing knowledge base data"
   value       = local.deploy_knowledge_base ? local.knowledge_base_bucket_name : "Not deployed - knowledge base disabled"
 }
+
+# API Gateway Outputs
+output "api_gateway_url" {
+  description = "Base URL of the API Gateway"
+  value       = var.enable_frontend ? aws_api_gateway_stage.prod[0].invoke_url : "Not deployed - set enable_frontend = true to deploy"
+}
+
+output "api_gateway_direct_endpoint" {
+  description = "Full URL for the direct Lambda endpoint"
+  value       = var.enable_frontend ? "${aws_api_gateway_stage.prod[0].invoke_url}/direct" : "Not deployed - set enable_frontend = true to deploy"
+}
+
+output "api_gateway_agent_endpoint" {
+  description = "Full URL for the agent Lambda endpoint"
+  value       = var.enable_frontend ? "${aws_api_gateway_stage.prod[0].invoke_url}/agent" : "Not deployed - set enable_frontend = true to deploy"
+}
+
+# Cognito Outputs
+output "cognito_user_pool_id" {
+  description = "ID of the Cognito User Pool"
+  value       = var.enable_frontend ? aws_cognito_user_pool.city_facts_pool[0].id : "Not deployed - set enable_frontend = true to deploy"
+}
+
+output "cognito_user_pool_arn" {
+  description = "ARN of the Cognito User Pool"
+  value       = var.enable_frontend ? aws_cognito_user_pool.city_facts_pool[0].arn : "Not deployed - set enable_frontend = true to deploy"
+}
+
+output "cognito_client_id" {
+  description = "ID of the Cognito User Pool Client"
+  value       = var.enable_frontend ? aws_cognito_user_pool_client.city_facts_client[0].id : "Not deployed - set enable_frontend = true to deploy"
+}
+
+output "cognito_domain" {
+  description = "Cognito User Pool Domain"
+  value       = var.enable_frontend ? aws_cognito_user_pool_domain.city_facts_domain[0].domain : "Not deployed - set enable_frontend = true to deploy"
+}
+
+# Configuration Outputs
+output "enable_frontend" {
+  description = "Whether frontend (API Gateway + Cognito) is enabled"
+  value       = var.enable_frontend
+}

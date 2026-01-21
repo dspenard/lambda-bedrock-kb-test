@@ -7,7 +7,13 @@ A simple, focused test environment for AWS Bedrock that demonstrates how to use 
 
 This project showcases two approaches: direct model access and agent-based architecture with knowledge base integration using OpenSearch Serverless vector storage.
 
-**Testing**: This is a backend-focused project. Testing is currently done by directly invoking Lambda functions via AWS CLI. No front-end interface exists at this time.
+**Backend Focus**: This is primarily a backend infrastructure project demonstrating AWS Bedrock integration patterns. An optional React frontend with AWS Cognito authentication is available - see [Frontend Deployment Guide](./docs/FRONTEND_DEPLOYMENT.md) for details.
+
+**Deployment Modes**:
+- **Backend-only** (default): Lambda + Bedrock + Knowledge Base - test via AWS CLI
+- **Full stack** (optional): Add API Gateway + Cognito + React frontend - test via browser
+
+**Testing**: Backend testing is done by directly invoking Lambda functions via AWS CLI. Enable `enable_frontend = true` in Terraform for browser-based testing with authentication.
 
 ![Bedrock Architecture Comparison](./docs/bedrock-full-comparison.png)
 

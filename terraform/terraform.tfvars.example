@@ -13,6 +13,11 @@
 # To disable knowledge base deployment, uncomment the line below:
 # enable_knowledge_base = false
 
+# Frontend Configuration (API Gateway + Cognito)
+# By default, frontend is DISABLED for backend-only testing via AWS CLI
+# To enable browser-based access with authentication, uncomment the line below:
+# enable_frontend = true
+
 # Option 2: Use existing S3 bucket (for legacy deployments)
 # This is automatically set by the setup-knowledge-base-s3.sh script
 # Do not set this manually unless you have an existing bucket

@@ -369,8 +369,6 @@ EOF
             echo "   ❌ Failed to install frontend dependencies"
             echo "   You can manually install later with: cd frontend && npm install"
         fi
-        
-        cd ..
     fi
 else
     echo "ℹ️  Step 8: Frontend deployment is disabled (enable_frontend = false)"

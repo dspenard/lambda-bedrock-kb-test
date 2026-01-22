@@ -6,17 +6,17 @@ This guide explains how to enable or disable the frontend components (API Gatewa
 
 The project supports two deployment modes:
 
-1. **Backend-only** (default): Lambda functions + Bedrock Agent + Knowledge Base
-   - Test via AWS CLI
-   - No authentication required
-   - Simpler setup
-   - Lower cost
-
-2. **Full stack**: Backend + API Gateway + Cognito + React frontend
+1. **Full stack** (default): Backend + API Gateway + Cognito + React frontend
    - Test via browser
    - User authentication with Cognito
    - Production-ready architecture
-   - Slightly higher cost
+   - Recommended for most users
+
+2. **Backend-only**: Lambda functions + Bedrock Agent + Knowledge Base
+   - Test via AWS CLI
+   - No authentication required
+   - Simpler setup for backend-only development
+   - Lower cost
 
 ## Configuration
 
@@ -25,11 +25,11 @@ The project supports two deployment modes:
 Edit `terraform/terraform.tfvars`:
 
 ```hcl
-# Backend-only mode (default)
-enable_frontend = false
-
-# Full stack mode
+# Full stack mode (default)
 enable_frontend = true
+
+# Backend-only mode
+enable_frontend = false
 ```
 
 ## Backend-Only Mode (enable_frontend = false)
@@ -67,8 +67,8 @@ Or use the test script:
 ```
 
 ### When to Use
-- Learning Bedrock and agents
-- Backend development and testing
+- Backend-only development and testing
+- Learning Bedrock internals without UI complexity
 - Cost-conscious POC
 - No need for browser access
 - Simple CLI-based workflows
@@ -79,7 +79,7 @@ Or use the test script:
 - OpenSearch: ~$175/month (1 OCU)
 - **Total: ~$175/month**
 
-## Full Stack Mode (enable_frontend = true)
+## Full Stack Mode (enable_frontend = true) - DEFAULT
 
 ### What Gets Deployed
 - ✅ Lambda functions (direct and agent)
@@ -110,11 +110,13 @@ Or use the test script:
    ```
 
 ### When to Use
+- **Recommended for most users** - provides complete experience
 - Building a production application
 - Need browser-based access
 - Demonstrating to non-technical users
 - Require user authentication
 - Want to explore full AWS integration
+- Learning the complete stack
 
 ### Monthly Cost Estimate
 - Lambda: ~$0 (free tier)
@@ -126,35 +128,9 @@ Or use the test script:
 
 ## Switching Between Modes
 
-### From Backend-Only to Full Stack
-
-1. Edit `terraform/terraform.tfvars`:
-   ```hcl
-   enable_frontend = true
-   ```
-
-2. Apply changes:
-   ```bash
-   cd terraform
-   terraform apply
-   ```
-
-3. Get Cognito configuration:
-   ```bash
-   terraform output cognito_user_pool_id
-   terraform output cognito_client_id
-   ```
-
-4. Update React app config if needed (should be automatic)
-
-5. Start React app:
-   ```bash
-   cd ../frontend
-   npm install
-   npm start
-   ```
-
 ### From Full Stack to Backend-Only
+
+**Note**: Since full stack is now the default, you would only do this if you want to disable the frontend for backend-only development.
 
 1. Edit `terraform/terraform.tfvars`:
    ```hcl
@@ -175,6 +151,37 @@ This will destroy:
 Lambda functions remain unchanged and can still be tested via AWS CLI.
 
 **Note on Deletion Protection**: The Cognito User Pool is configured with `deletion_protection = "INACTIVE"` for test/dev environments, allowing Terraform to destroy it cleanly. For production deployments, you should change this to `"ACTIVE"` in `terraform/cognito.tf` to prevent accidental deletion of user data.
+
+### From Backend-Only to Full Stack
+
+### From Backend-Only to Full Stack
+
+**Note**: Since full stack is the default, this is only needed if you previously disabled the frontend.
+
+1. Edit `terraform/terraform.tfvars`:
+   ```hcl
+   enable_frontend = true
+   ```
+
+2. Apply changes:
+   ```bash
+   cd terraform
+   terraform apply
+   ```
+
+3. The deployment script automatically updates frontend configuration, but you can verify:
+   ```bash
+   terraform output cognito_user_pool_id
+   terraform output cognito_client_id
+   terraform output api_gateway_url
+   ```
+
+4. Start React app:
+   ```bash
+   cd ../frontend
+   npm install
+   npm start
+   ```
 
 ## Architecture Diagrams
 
@@ -235,21 +242,22 @@ This means `enable_frontend = false` and those resources weren't created. This i
 ## Best Practices
 
 ### For Learning/Development
-- Start with `enable_frontend = false`
-- Test backend via AWS CLI
-- Enable frontend when ready to build UI
+- **Use the default full stack mode** for the complete experience
+- Test via browser for easier debugging and visualization
+- Use backend-only mode (`enable_frontend = false`) only if focusing on Bedrock internals
 
 ### For Production
-- Use `enable_frontend = true`
+- Keep `enable_frontend = true` (default)
 - Configure custom domain for API Gateway
 - Enable MFA in Cognito
 - Set up CloudWatch alarms
 - Use separate environments (dev/staging/prod)
+- Change Cognito deletion protection to `"ACTIVE"`
 
 ### For Cost Optimization
-- Use `enable_frontend = false` when not actively testing UI
+- Use `enable_frontend = false` when not actively testing UI (saves ~$5/month on API Gateway)
 - Consider disabling knowledge base if not needed: `enable_knowledge_base = false`
-- Tear down entire stack when not in use: `terraform destroy`
+- Tear down entire stack when not in use: `./scripts/teardown-complete.sh`
 
 ## Related Documentation
 

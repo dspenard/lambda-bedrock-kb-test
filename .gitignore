@@ -16,6 +16,10 @@ terraform.tfplan.*
 test_*.json
 response*.json
 
+# Generated diagrams
+generated-diagrams/
+generated-diagrams/*
+
 # AWS CLI and credentials
 .aws/
 aws-exports.js

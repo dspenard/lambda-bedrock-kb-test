@@ -7,15 +7,21 @@ A simple, focused test environment for AWS Bedrock that demonstrates how to use 
 
 This project showcases two approaches: direct model access and agent-based architecture with knowledge base integration using OpenSearch Serverless vector storage.
 
-**Backend Focus**: This is primarily a backend infrastructure project demonstrating AWS Bedrock integration patterns. An optional React frontend with AWS Cognito authentication is available - see [Frontend Deployment Guide](./docs/FRONTEND_DEPLOYMENT.md) for details.
-
 **Deployment Modes**:
-- **Backend-only** (default): Lambda + Bedrock + Knowledge Base - test via AWS CLI
-- **Full stack** (optional): Add API Gateway + Cognito + React frontend - test via browser
+- **Backend-only**: Lambda + Bedrock + Knowledge Base - test via AWS CLI
+- **Full stack** (default): Add API Gateway + Cognito + React frontend - test via browser
 
-**Testing**: Backend testing is done by directly invoking Lambda functions via AWS CLI. Enable `enable_frontend = true` in Terraform for browser-based testing with authentication.
+### Backend Architecture
+
+The backend architecture includes Lambda, Bedrock, OpenSearch, and S3:
 
 ![Bedrock Architecture Comparison](./docs/bedrock-full-comparison.png)
+
+### Full Stack Architecture
+
+The complete architecture includes React frontend with AWS Amplify, Cognito authentication, and API Gateway:
+
+![Full Stack Architecture](./docs/full-stack-architecture.png)
 
 ## 🎯 What This Demonstrates
 
@@ -29,16 +35,18 @@ This project showcases two approaches: direct model access and agent-based archi
 - Population, geography, and interesting trivia
 
 **Key AWS Services**:
-- AWS Bedrock (Claude 3.5 Haiku model)
+- AWS Bedrock (Claude 3.5 Haiku model - chosen for cost-effective testing)
 - Bedrock Agents with Action Groups
 - Bedrock Knowledge Base with vector search
 - OpenSearch Serverless for vector storage
 - Lambda functions for custom logic
 - S3 for knowledge base data storage
 
+**Model Choice**: This project uses **Claude 3.5 Haiku** for its balance of performance and cost-effectiveness during development and testing. The architecture supports swapping to other Bedrock models (Claude Sonnet, Opus, or other foundation models) as needed.
+
 ### 💡 Vector Storage Note
 
-This project uses **OpenSearch Serverless** for vector storage because it's simple to set up and fully managed. However, it can be **expensive**:
+This project uses **OpenSearch Serverless** for vector storage because it's simple to set up and fully managed. However, it can be **expensive**, so an S3 Vector store will be added soon as the default:
 - **Dev/Test** (1 OCU, no redundancy): ~$175/month
 - **Production** (2 OCUs with redundancy): ~$350/month minimum
 - **Production** (4 OCUs with redundancy): ~$700/month
@@ -48,6 +56,7 @@ This project uses **OpenSearch Serverless** for vector storage because it's simp
 **AWS Native Options:**
 - **Amazon Aurora PostgreSQL with pgvector** - Cost-effective, familiar SQL interface, fully supported
 - **Amazon Neptune Analytics** - Graph database with vector search capabilities
+- **Amazon S3 Vectors** - S3 support to store and query vectors
 
 **Third-Party Options (Bedrock-Supported):**
 - **Pinecone** - Purpose-built vector database, pay-per-use pricing
@@ -535,44 +544,78 @@ terraform apply
 │   ├── main.tf                       # Main Terraform configuration with prefix support
 │   ├── lambda.tf                     # Lambda functions and IAM (prefix-aware)
 │   ├── bedrock_agent.tf              # Bedrock agent configuration (prefix-aware)
-│   ├── bedrock_knowledge_base_simple.tf # Knowledge base with Terraform-managed S3
+│   ├── bedrock_knowledge_base_simple.tf # Knowledge base with OpenSearch Serverless
+│   ├── api_gateway.tf                # API Gateway REST API configuration
+│   ├── cognito.tf                    # Cognito User Pool for authentication
 │   ├── outputs.tf                    # Terraform outputs (prefix-aware)
 │   ├── terraform.tfvars              # 🔧 Your personal config (git-ignored, prefix settings)
 │   ├── terraform.tfvars.example      # 📋 Example configuration file
 │   ├── terraform.tfstate             # ⚠️ CRITICAL: Infrastructure state (DO NOT DELETE)
 │   └── .terraform/                   # Terraform working directory
 ├── scripts/                          # 🛠️ Deployment and Management Scripts
-│   ├── deploy-complete.sh            # 🚀 Complete automated deployment (NEW)
+│   ├── deploy-complete.sh            # 🚀 Complete automated deployment with auto-config
 │   ├── deploy-lambda.sh              # Deploy Lambda functions (prefix-aware)
 │   ├── deploy-direct.sh              # Deploy direct model Lambda only
 │   ├── deploy-agent.sh               # Deploy agent Lambda only
 │   ├── build.sh                      # Build Lambda packages
 │   ├── test-lambda.sh                # 🧪 Testing script (prefix-aware)
 │   ├── dev-workflow.sh               # 🛠️ Development helper (prefix-aware)
-│   ├── teardown-complete.sh          # 🔥 Complete infrastructure teardown
+│   ├── teardown-complete.sh          # 🔥 Complete infrastructure teardown with S3 cleanup
 │   ├── teardown-infrastructure.sh    # 🏗️ Infrastructure-only teardown
 │   ├── teardown-s3-only.sh           # 🪣 S3 data teardown
 │   ├── import-existing-resources.sh  # 🆘 State recovery script (prefix-aware)
 │   ├── setup-knowledge-base-s3.sh    # 📦 Legacy S3 setup (external buckets)
+│   ├── get-cognito-config.sh         # 🔐 Get Cognito configuration
 │   └── check-knowledge-base-s3.sh    # 🔍 Check S3 status
 ├── src/                              # 💻 Lambda Source Code
 │   ├── lambda_direct/
 │   │   └── index.py                  # Direct model access Lambda
 │   └── lambda_agent/
 │       └── index.py                  # Agent-based Lambda
+├── frontend/                         # ⚛️ React Frontend Application
+│   ├── public/
+│   │   └── index.html                # HTML template
+│   ├── src/
+│   │   ├── components/               # React components
+│   │   │   ├── Header.js             # App header with user info
+│   │   │   ├── TabBar.js             # Navigation tabs
+│   │   │   ├── CityInput.js          # City input with autocomplete
+│   │   │   ├── ResponseCard.js       # Response display component
+│   │   │   ├── ResponseComparison.js # AI comparison component
+│   │   │   ├── HistorySidebar.js     # Query history sidebar
+│   │   │   └── LambdaTab.js          # Main tab with API calls
+│   │   ├── App.js                    # Main App component with tabs
+│   │   ├── App.css                   # App styles
+│   │   ├── aws-config.js             # AWS Amplify/Cognito config (auto-updated)
+│   │   ├── index.js                  # React entry point
+│   │   └── index.css                 # Global styles
+│   ├── package.json                  # Dependencies and scripts
+│   └── README.md                     # Frontend documentation
 ├── data/                             # 📊 Test Data and Knowledge Base Content
 │   ├── lambda-tests/                 # Test payloads
-│   │   ├── direct-*.json
-│   │   ├── agent-*.json
+│   │   ├── direct-*.json             # Direct Lambda test payloads
+│   │   ├── agent-*.json              # Agent Lambda test payloads
 │   │   └── README.md
 │   └── knowledge-base/               # Knowledge base source data
 │       ├── world_cities_air_quality_water_pollution_2021.csv
 │       ├── world_cities_cost_of_living_2018.csv
+│       ├── world-cities-overview.md
 │       └── README.md
 ├── docs/                             # 📖 Documentation
 │   ├── API.md                        # Complete API documentation with OpenAPI specs
-│   └── bedrock-full-comparison.png   # Architecture diagram
-├── .kb-bucket-name                   # 📝 S3 bucket name reference (legacy)
+│   ├── AUTHENTICATION.md             # Cognito authentication guide
+│   ├── DEPLOYMENT.md                 # Deployment instructions
+│   ├── FRONTEND_DEPLOYMENT.md        # Frontend deployment guide
+│   ├── TALK_POINTS.md                # Presentation talking points
+│   ├── bedrock-full-comparison.png   # Architecture comparison diagram
+│   ├── full-stack-architecture.png   # Full stack architecture diagram
+│   └── frontend-ui-example.png       # Frontend UI screenshot
+├── generated-diagrams/               # 🎨 Generated architecture diagrams
+│   └── full-stack-architecture.png
+├── .gitignore                        # Git ignore patterns
+├── .gitattributes                    # Git attributes
+├── CONTRIBUTING.md                   # Contribution guidelines
+├── LICENSE                           # MIT License
 ├── *.zip                             # Generated Lambda packages (git-ignored)
 ├── test_*.json                       # Generated test results (git-ignored)
 └── README.md                         # This file
@@ -837,14 +880,35 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔮 Next Steps
 
-- [ ] Add front-end interface (Streamlit, React, etc) with API Gateway integration to provide a user-friendly UI for querying city facts
-- [ ] Implement Bedrock Guardrails to filter inappropriate content and enforce safety policies
-- [ ] Explore multi-agent architecture where specialized agents handle different aspects (e.g., one for environmental data, one for cultural facts, etc)
-- [ ] Add more data sources to knowledge base
-- [ ] Implement conversation memory
-- [ ] Create additional action groups
-- [ ] Add monitoring and alerting
-- [ ] Implement automated testing pipeline
+### Infrastructure & Deployment
+- [ ] **Replace hard-coded values with config-driven settings** - Move hard-coded values (model IDs, regions, city lists, etc.) to centralized configuration files for easier customization and maintenance
+- [ ] **Add S3 vector store support** - Implement Amazon S3 as an alternative vector store option (currently OpenSearch Serverless only)
+- [ ] **Add CDK deployment option** - Provide AWS CDK as an alternative to Terraform for infrastructure deployment
+- [ ] **Implement automated testing pipeline** - Set up CI/CD with GitHub Actions or AWS CodePipeline for automated testing and deployment
+- [ ] **Address code coverage** - Add comprehensive test coverage for Terraform configurations and React components
+
+### Bedrock & AI Features
+- [ ] **Add model selection capability** - Enable swapping between different Bedrock foundation models (Claude Sonnet, Opus, Llama, etc.) via configuration
+- [ ] **Implement Bedrock Guardrails** - Add content filtering, PII detection, and safety policies to protect against inappropriate content
+- [ ] **Add more data sources** - Expand knowledge base with additional datasets (weather, demographics, tourism, real-time APIs)
+- [ ] **Multi-agent architecture** - Create specialized agents for different domains (environmental data, cultural facts, travel recommendations)
+- [ ] **Conversation memory** - Implement session-based memory for contextual conversations
+- [ ] **Streaming responses** - Add real-time streaming for agent responses in the UI
+
+### Frontend & User Experience
+- [ ] **Add Streamlit testing interface** - Create a lightweight Streamlit app for quick API Gateway testing and debugging
+- [ ] **Wire multiple agents to frontend** - Create UI to select and interact with different specialized agents
+- [ ] **Add chatbot interface** - Replace single-query UI with conversation history and multi-turn dialogue
+
+### Backend Testing & Development
+- [ ] **Create Jupyter notebook** - Build interactive notebook for Lambda development, Bedrock API exploration, and knowledge base testing
+- [ ] **Add Postman collection** - Create comprehensive Postman collection with pre-configured API Gateway endpoints, authentication, and example requests
+
+### Monitoring & Operations
+- [ ] **Add monitoring and alerting** - Set up CloudWatch dashboards, alarms, and X-Ray tracing
+- [ ] **Cost optimization** - Implement request caching, optimize OpenSearch usage, add budget alerts
+- [ ] **Performance testing** - Load testing and optimization for production workloads
+- [ ] **Multi-region deployment** - Support for deploying across multiple AWS regions
 
 ## 📝 Notes
 

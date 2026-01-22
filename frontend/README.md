@@ -123,14 +123,24 @@ These limits are sufficient for normal testing and development but protect again
 ```
 frontend/
 ├── public/
-│   └── index.html          # HTML template
+│   └── index.html                      # HTML template
 ├── src/
-│   ├── App.js              # Main App component with tabs
-│   ├── App.css             # App styles
-│   ├── index.js            # React entry point
-│   └── index.css           # Global styles
-├── package.json            # Dependencies and scripts
-└── README.md               # This file
+│   ├── components/
+│   │   ├── CityInput.js                # City autocomplete dropdown
+│   │   ├── Header.js                   # App header with sign out
+│   │   ├── HistorySidebar.js           # Query history sidebar
+│   │   ├── LambdaTab.js                # Main comparison tab
+│   │   ├── ResponseCard.js             # Individual response display
+│   │   ├── ResponseComparison.js       # Side-by-side comparison
+│   │   └── TabBar.js                   # Tab navigation
+│   ├── App.js                          # Main App component with auth
+│   ├── App.css                         # App styles
+│   ├── aws-config.js                   # Cognito configuration
+│   ├── index.js                        # React entry point
+│   └── index.css                       # Global styles
+├── package.json                        # Dependencies and scripts
+├── package-lock.json                   # Locked dependency versions
+└── README.md                           # This file
 ```
 
 ## Usage

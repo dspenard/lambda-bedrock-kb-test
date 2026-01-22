@@ -273,63 +273,42 @@ resource "random_id" "kb_suffix" {
   byte_length = 6
 }
 
-# Create OpenSearch vector index automatically
+# Create OpenSearch vector index using Python script
 resource "null_resource" "create_opensearch_vector_index" {
   count = local.deploy_knowledge_base ? 1 : 0
 
-  # Trigger recreation if collection changes
   triggers = {
-    collection_id = aws_opensearchserverless_collection.knowledge_base[0].id
+    collection_endpoint = aws_opensearchserverless_collection.knowledge_base[0].collection_endpoint
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       echo "🔍 Creating OpenSearch vector index..."
-      echo "   Collection ID: ${aws_opensearchserverless_collection.knowledge_base[0].id}"
       
-      # Create the vector index
-      aws opensearchserverless create-index \
-        --id "${aws_opensearchserverless_collection.knowledge_base[0].id}" \
-        --index-name "bedrock-knowledge-base-default-index" \
-        --index-schema '{
-          "settings": {
-            "index": {
-              "knn": true
-            }
-          },
-          "mappings": {
-            "properties": {
-              "embeddings": {
-                "type": "knn_vector",
-                "dimension": 1536,
-                "method": {
-                  "name": "hnsw",
-                  "space_type": "l2",
-                  "engine": "faiss"
-                }
-              },
-              "text": {
-                "type": "text"
-              },
-              "bedrock-metadata": {
-                "type": "text"
-              }
-            }
-          }
-        }' \
-        --region us-east-1 || echo "⚠️  Index may already exist"
+      # Wait for collection to be active
+      echo "⏳ Waiting 30 seconds for collection to be active..."
+      sleep 30
       
-      echo "✅ Vector index creation completed"
+      # Create index using Python script
+      python3 ../scripts/create-opensearch-index.py "${aws_opensearchserverless_collection.knowledge_base[0].collection_endpoint}"
+      
+      if [ $? -eq 0 ]; then
+        echo "✅ Index creation completed"
+      else
+        echo "❌ Index creation failed"
+        exit 1
+      fi
       
       # Wait for index to be ready
-      echo "⏳ Waiting for index to be ready..."
+      echo "⏳ Waiting 10 seconds for index to be ready..."
       sleep 10
     EOT
   }
 
   depends_on = [
     aws_opensearchserverless_collection.knowledge_base,
-    aws_opensearchserverless_access_policy.knowledge_base
+    aws_opensearchserverless_access_policy.knowledge_base,
+    aws_iam_role_policy.knowledge_base_opensearch_policy
   ]
 }
 
@@ -368,7 +347,8 @@ resource "aws_bedrockagent_knowledge_base" "city_facts" {
 
   depends_on = [
     null_resource.upload_knowledge_base_files,
-    null_resource.create_opensearch_vector_index
+    null_resource.create_opensearch_vector_index,
+    aws_iam_role_policy.knowledge_base_opensearch_policy
   ]
 }
 

@@ -347,13 +347,13 @@ export default awsConfig;
 EOF
             echo "   ✅ Frontend configuration updated"
             
-            # Update API URL in App.js
+            # Update API URL in LambdaTab.js
             cd terraform
             API_URL=$(terraform output -raw api_gateway_url)
             cd ..
             
-            sed -i.bak "s|const API_BASE_URL = '.*'|const API_BASE_URL = '${API_URL}'|" frontend/src/App.js
-            rm -f frontend/src/App.js.bak
+            sed -i.bak "s|const API_BASE_URL = '.*'|const API_BASE_URL = '${API_URL}'|" frontend/src/components/LambdaTab.js
+            rm -f frontend/src/components/LambdaTab.js.bak
             
             echo "   ✅ API Gateway URL configured"
             echo ""

@@ -62,9 +62,9 @@ variable "include_current_user_in_opensearch_access" {
 }
 
 variable "enable_frontend" {
-  description = "Enable API Gateway and Cognito for frontend access. Set to false for backend-only testing via AWS CLI (default: false)"
+  description = "Enable API Gateway and Cognito for frontend access. Set to false for backend-only testing via AWS CLI (default: true)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # Data source to get current AWS caller identity

@@ -1,8 +1,8 @@
 const awsConfig = {
   Auth: {
     Cognito: {
-      userPoolId: 'us-east-1_6vAtz1rGj',
-      userPoolClientId: '7on0nrn3hie7e1s9ra2rsn5v96',
+      userPoolId: 'us-east-1_QFETQOHxZ',
+      userPoolClientId: '7a0btq8hbg64aflquk18jqmq2l',
       loginWith: {
         email: true,
       },

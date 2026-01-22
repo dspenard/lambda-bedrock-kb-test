@@ -1,5 +1,4 @@
 # Working Knowledge Base configuration using OpenSearch Serverless
-# This uses the manually created OpenSearch collection and vector index
 
 # Data source to reference the existing S3 bucket
 # Only used when knowledge_base_bucket_name is provided
@@ -334,13 +333,13 @@ resource "null_resource" "create_opensearch_vector_index" {
   ]
 }
 
-# Bedrock Knowledge Base using OpenSearch Serverless
-resource "aws_bedrockagent_knowledge_base" "city_facts_simple" {
+# Bedrock Knowledge Base with OpenSearch Serverless
+resource "aws_bedrockagent_knowledge_base" "city_facts" {
   count    = local.deploy_knowledge_base ? 1 : 0
-  name     = "${local.full_project_name}-city-facts-kb-s3"
+  name     = "${local.full_project_name}-city-facts-kb"
   role_arn = aws_iam_role.knowledge_base_role.arn
   
-  description = "Knowledge base containing city facts, air quality, and cost of living data (S3 Vectors)"
+  description = "Knowledge base containing city facts, air quality, and cost of living data"
 
   knowledge_base_configuration {
     vector_knowledge_base_configuration {
@@ -376,7 +375,7 @@ resource "aws_bedrockagent_knowledge_base" "city_facts_simple" {
 # Data Source 1: Air Quality and Water Pollution CSV
 resource "aws_bedrockagent_data_source" "air_quality_data_simple" {
   count             = local.deploy_knowledge_base ? 1 : 0
-  knowledge_base_id = aws_bedrockagent_knowledge_base.city_facts_simple[0].id
+  knowledge_base_id = aws_bedrockagent_knowledge_base.city_facts[0].id
   name              = "city-air-quality-water-pollution"
   description       = "World cities air quality and water pollution data from 2021"
 
@@ -406,7 +405,7 @@ resource "aws_bedrockagent_data_source" "air_quality_data_simple" {
 # Data Source 2: Cost of Living CSV
 resource "aws_bedrockagent_data_source" "cost_of_living_data_simple" {
   count             = local.deploy_knowledge_base ? 1 : 0
-  knowledge_base_id = aws_bedrockagent_knowledge_base.city_facts_simple[0].id
+  knowledge_base_id = aws_bedrockagent_knowledge_base.city_facts[0].id
   name              = "city-cost-of-living"
   description       = "World cities cost of living data from 2018"
 
@@ -438,7 +437,7 @@ resource "aws_bedrockagent_agent_knowledge_base_association" "city_facts_kb_asso
   count                = local.deploy_knowledge_base ? 1 : 0
   agent_id             = aws_bedrockagent_agent.city_facts_agent.agent_id
   agent_version        = "DRAFT"
-  knowledge_base_id    = aws_bedrockagent_knowledge_base.city_facts_simple[0].id
+  knowledge_base_id    = aws_bedrockagent_knowledge_base.city_facts[0].id
   description          = "Association between city facts agent and knowledge base"
   knowledge_base_state = "ENABLED"
 }

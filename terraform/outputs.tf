@@ -30,12 +30,12 @@ output "bedrock_agent_arn" {
 # Knowledge Base Outputs
 output "knowledge_base_id" {
   description = "ID of the Bedrock Knowledge Base"
-  value       = local.deploy_knowledge_base ? aws_bedrockagent_knowledge_base.city_facts_simple[0].id : "Not deployed - knowledge base disabled"
+  value       = local.deploy_knowledge_base ? aws_bedrockagent_knowledge_base.city_facts[0].id : "Not deployed - knowledge base disabled"
 }
 
 output "knowledge_base_arn" {
   description = "ARN of the Bedrock Knowledge Base"
-  value       = local.deploy_knowledge_base ? aws_bedrockagent_knowledge_base.city_facts_simple[0].arn : "Not deployed - knowledge base disabled"
+  value       = local.deploy_knowledge_base ? aws_bedrockagent_knowledge_base.city_facts[0].arn : "Not deployed - knowledge base disabled"
 }
 
 output "opensearch_collection_id" {

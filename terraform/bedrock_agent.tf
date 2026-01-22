@@ -77,7 +77,7 @@ resource "aws_iam_role_policy" "bedrock_agent_model_policy" {
           "bedrock:Retrieve"
         ]
         Resource = [
-          aws_bedrockagent_knowledge_base.city_facts_simple[0].arn
+          aws_bedrockagent_knowledge_base.city_facts[0].arn
         ]
       }
     ] : [

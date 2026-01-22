@@ -1,5 +1,7 @@
 # Bedrock Agent Test Bed with Knowledge Base
 
+Apologies for anything misleading or incorrect in this README doc or other docs throughout the repo.  This is a fast work-in-progress and I promise to get the docs in 100% working order soon.  The architecture notes and quick start deployment notes are in working order; many other things are still a bit meh.
+
 A simple, focused test environment for AWS Bedrock that demonstrates how to use Terraform to create a Bedrock agent with a small Knowledge Base to supplement the model with information available about a given city.  Users provide a city name, and Bedrock returns 10 interesting facts by combining:
 - **General knowledge** from Claude 3.5 Haiku foundation model
 - **Real-world data** from a knowledge base (air quality, water pollution, cost of living, and others)

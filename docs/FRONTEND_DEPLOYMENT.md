@@ -76,8 +76,9 @@ Or use the test script:
 ### Monthly Cost Estimate
 - Lambda: ~$0 (free tier covers most testing)
 - Bedrock: Pay per request (~$0.001 per request)
-- OpenSearch: ~$175/month (1 OCU)
-- **Total: ~$175/month**
+- OpenSearch Serverless: ~$175-$700/month (varies by OCU usage - **extremely expensive**)
+  - **Note**: OpenSearch was chosen for ease of use in this PoC. S3 vector store will replace it soon for significant cost savings.
+- **Total: ~$175-$700/month**
 
 ## Full Stack Mode (enable_frontend = true) - DEFAULT
 
@@ -121,10 +122,11 @@ Or use the test script:
 ### Monthly Cost Estimate
 - Lambda: ~$0 (free tier)
 - Bedrock: Pay per request (~$0.001 per request)
-- OpenSearch: ~$175/month (1 OCU)
+- OpenSearch Serverless: ~$175-$700/month (varies by OCU usage - **extremely expensive**)
+  - **Note**: OpenSearch was chosen for ease of use in this PoC. S3 vector store will replace it soon for significant cost savings.
 - API Gateway: ~$3.50 per million requests
 - Cognito: Free for first 50,000 MAUs
-- **Total: ~$175-180/month** (assuming light usage)
+- **Total: ~$175-$705/month** (assuming light usage)
 
 ## Switching Between Modes
 
@@ -151,8 +153,6 @@ This will destroy:
 Lambda functions remain unchanged and can still be tested via AWS CLI.
 
 **Note on Deletion Protection**: The Cognito User Pool is configured with `deletion_protection = "INACTIVE"` for test/dev environments, allowing Terraform to destroy it cleanly. For production deployments, you should change this to `"ACTIVE"` in `terraform/cognito.tf` to prevent accidental deletion of user data.
-
-### From Backend-Only to Full Stack
 
 ### From Backend-Only to Full Stack
 
@@ -255,9 +255,10 @@ This means `enable_frontend = false` and those resources weren't created. This i
 - Change Cognito deletion protection to `"ACTIVE"`
 
 ### For Cost Optimization
+- **Most important**: Tear down entire stack when not in use to avoid OpenSearch costs: `./scripts/teardown-complete.sh`
 - Use `enable_frontend = false` when not actively testing UI (saves ~$5/month on API Gateway)
 - Consider disabling knowledge base if not needed: `enable_knowledge_base = false`
-- Tear down entire stack when not in use: `./scripts/teardown-complete.sh`
+- **Coming soon**: S3 vector store will replace OpenSearch Serverless, reducing costs dramatically
 
 ## Related Documentation
 

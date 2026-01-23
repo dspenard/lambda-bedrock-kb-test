@@ -4,13 +4,39 @@ Complete guide for deploying and tearing down the Bedrock Agent Test Bed infrast
 
 ---
 
+## 📚 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [Prerequisites and Requirements](#-prerequisites-and-requirements)
+- [AWS Access and Permissions](#-aws-access-and-permissions-requirements)
+- [Configuration](#️-configuration)
+  - [terraform.tfvars Setup](#-terraformtfvars-setup-optional)
+  - [Resource Prefix Options](#️-resource-prefix-option-examples)
+  - [Knowledge Base Deployment Options](#-knowledge-base-deployment-options)
+  - [OpenSearch Access Configuration](#-opensearch-access-configuration)
+  - [Terraform State Management](#️-terraform-state-management)
+- [Deployment Options](#-deployment-options)
+  - [Simplified Deployment (Recommended)](#-simplified-deployment-recommended)
+  - [Resource Prefixing](#️-resource-prefixing-for-multi-developer-environments)
+  - [Legacy Deployment](#option-2-legacy-deployment-external-s3-management)
+  - [Manual Step-by-Step Deployment](#option-3-manual-step-by-step-deployment)
+- [Teardown and Cleanup](#-teardown-and-cleanup)
+  - [Complete Teardown](#1-complete-teardown-recommended-for-final-cleanup)
+  - [Infrastructure-Only Teardown](#2-infrastructure-only-teardown)
+  - [S3-Only Teardown](#3-s3-only-teardown)
+  - [Manual Teardown](#4-manual-teardown-advanced-users)
+
+---
+
 ## 🚀 Quick Start
 
-If you're up to speed on Git, Terraform, and AWS CLI and setting its credentials, then follow these steps for a complete deployment in ~10 minutes.  Otherwise, go to the Table of Contents for detailed instructions.
+If you're anxious to get started and you're up to speed on npm, Git, Python, Terraform, and AWS CLI and setting its credentials, then follow these steps for a complete deployment in about 10 minutes.  Otherwise, go to the [Prerequisites and Requirements](#-prerequisites-and-requirements) section and follow along.
 
 ### Prerequisites
 - **Git** - Clone the repository
 - **Terraform** (>= 1.0) - Infrastructure as code
+- **Python 3** (>= 3.8) - Required for OpenSearch index creation; install `opensearch-py` and `boto3` packages
+- **Node.js and npm** (>= 14.x) - Required for React frontend
 - **AWS Account** - Admin access (for ease of use, recommended for running this PoC)
 - **AWS CLI** (>= 2.0) - Configured with credentials for your chosen AWS Account; set region to us-east-1
 
@@ -53,28 +79,7 @@ Try different cities to see how the agent combines knowledge base data with gene
 
 **Cost**: ~$200/month if left running (primarily OpenSearch Serverless). Teardown removes all charges.
 
----
-
-## 📚 Table of Contents
-
-- [Prerequisites and Requirements](#-prerequisites-and-requirements)
-- [AWS Access and Permissions](#-aws-access-and-permissions-requirements)
-- [Configuration](#️-configuration)
-  - [terraform.tfvars Setup](#-terraformtfvars-setup-optional)
-  - [Resource Prefix Options](#️-resource-prefix-option-examples)
-  - [Knowledge Base Deployment Options](#-knowledge-base-deployment-options)
-  - [OpenSearch Access Configuration](#-opensearch-access-configuration)
-  - [Terraform State Management](#️-terraform-state-management)
-- [Deployment Options](#-deployment-options)
-  - [Simplified Deployment (Recommended)](#-simplified-deployment-recommended)
-  - [Resource Prefixing](#️-resource-prefixing-for-multi-developer-environments)
-  - [Legacy Deployment](#option-2-legacy-deployment-external-s3-management)
-  - [Manual Step-by-Step Deployment](#option-3-manual-step-by-step-deployment)
-- [Teardown and Cleanup](#-teardown-and-cleanup)
-  - [Complete Teardown](#1-complete-teardown-recommended-for-final-cleanup)
-  - [Infrastructure-Only Teardown](#2-infrastructure-only-teardown)
-  - [S3-Only Teardown](#3-s3-only-teardown)
-  - [Manual Teardown](#4-manual-teardown-advanced-users)
+**💡 Vector Storage Note**: OpenSearch Serverless was chosen for this PoC due to ease of setup and being fully managed, but it is **extremely expensive** (~$175-$700/month depending on configuration). An S3 vector store option will be added soon as a more cost-effective alternative. For production deployments, consider alternatives like Amazon Aurora PostgreSQL with pgvector, Amazon S3 Vectors, or third-party options like Pinecone.
 
 ---
 
@@ -149,6 +154,57 @@ sudo yum install git      # CentOS/RHEL
 git --version
 ```
 
+#### 4. **Python 3** (>= 3.8)
+Required for OpenSearch index creation script.
+
+**Installation:**
+```bash
+# macOS (using Homebrew)
+brew install python3
+
+# Windows
+# Download from: https://www.python.org/downloads/
+
+# Linux (usually pre-installed)
+sudo apt install python3 python3-pip  # Ubuntu/Debian
+sudo yum install python3 python3-pip  # CentOS/RHEL
+
+# Verify installation
+python3 --version
+pip3 --version
+```
+
+**Required Python packages:**
+```bash
+# Install required packages for OpenSearch index creation
+pip3 install opensearch-py boto3
+
+# On macOS, you may need to use --break-system-packages flag
+pip3 install --break-system-packages opensearch-py boto3
+```
+
+#### 5. **Node.js and npm** (>= 14.x)
+Required for React frontend (when `enable_frontend = true` - default).
+
+**Installation:**
+```bash
+# macOS (using Homebrew)
+brew install node
+
+# Windows
+# Download from: https://nodejs.org/
+
+# Linux (Ubuntu/Debian)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+```
+
+**Note:** If you're deploying backend-only (`enable_frontend = false`), Node.js is not required.
+
 ### 🔧 Optional Tools (Recommended)
 
 #### **jq** - JSON processor for testing
@@ -172,8 +228,6 @@ curl --version
 
 ### 📝 Development Notes
 
-**Python**: The Lambda functions use Python 3.11, but this runs in the AWS Lambda runtime. You don't need Python installed locally unless you plan to modify the Lambda source code.
-
 **System Tools**: The setup scripts use common system tools (`unzip`, `wget`, `curl`) that are typically pre-installed on most systems.
 
 ### ✅ Verification Checklist
@@ -192,6 +246,22 @@ aws --version
 # Check Git
 git --version
 # Expected: git version 2.0+
+
+# Check Python 3
+python3 --version
+# Expected: Python 3.8+
+
+# Check Python packages
+pip3 list | grep -E "opensearch-py|boto3"
+# Expected: opensearch-py and boto3 listed
+
+# Check Node.js (if using frontend)
+node --version
+# Expected: v14.0+
+
+# Check npm (if using frontend)
+npm --version
+# Expected: 6.0+
 
 # Check AWS credentials (after configuration)
 aws sts get-caller-identity
@@ -221,10 +291,13 @@ jq --version
 For macOS users with Homebrew:
 ```bash
 # Install all prerequisites at once
-brew install terraform awscli git jq
+brew install terraform awscli git python3 node jq
+
+# Install Python packages
+pip3 install --break-system-packages opensearch-py boto3
 
 # Verify installations
-terraform --version && aws --version && git --version && jq --version
+terraform --version && aws --version && git --version && python3 --version && node --version && jq --version
 ```
 
 For Ubuntu/Debian users:
@@ -233,7 +306,14 @@ For Ubuntu/Debian users:
 sudo apt update
 
 # Install prerequisites
-sudo apt install -y git curl jq
+sudo apt install -y git curl jq python3 python3-pip
+
+# Install Python packages
+pip3 install opensearch-py boto3
+
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
 
 # Install AWS CLI
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -277,36 +357,24 @@ export AWS_PROFILE=my-profile
 aws sts get-caller-identity
 ```
 
-#### Alternative Authentication Methods
-
-For different environments, consider these alternatives:
-- **AWS SSO**: `aws sso configure`
-- **IAM Roles**: Use EC2 instance profiles or assume roles
-- **AWS Vault**: Third-party tool for secure credential management
-
 ### Required AWS Permissions
 
-This project requires extensive AWS permissions to create and manage multiple services. For the quickest setup, we recommend using admin access for development and testing. The easiest approach is to use an IAM user or role with `AdministratorAccess` policy:
+This project requires extensive AWS permissions to create and manage multiple services.
 
-```bash
-# Check if you have admin access
-aws iam get-user
-aws sts get-caller-identity
+**For Development/Testing (Easiest):**
+- Use an IAM user or role with the **`AdministratorAccess`** managed policy
+- This is the quickest path for PoC and learning environments
+- Eliminates permission-related deployment issues
+- Use with caution, as least-privilege is best practice
 
-# Your user should have the AdministratorAccess policy attached for ease of use with this PoC
-```
+**For Production and not running locally for testing (Least-Privilege):**
+- Create a custom IAM role with only the specific permissions listed in the policy statement below
+- Assign this role to your IAM user
+- Follows AWS security best practices for minimal required access
 
-**Benefits:**
-- ✅ **Quick Setup**: No need to configure individual permissions
-- ✅ **Full Access**: Can create all required AWS resources
-- ✅ **Easy Testing**: Perfect for development and learning
-- ✅ **No Permission Issues**: Eliminates permission-related deployment failures
+#### 🔒 Least-Privilege IAM Policy
 
-**When to use:** Development, testing, learning, proof-of-concept
-
-#### 🔒 Production Approach: Minimal IAM Policy
-
-For production environments, you can use this minimal policy instead of admin access:
+For production environments or when you need least-privilege access, create a custom IAM role with this policy and assign it to your user:
 
 ```json
 {
@@ -393,8 +461,6 @@ For production environments, you can use this minimal policy instead of admin ac
     ]
 }
 ```
-
-**When to use:** Production environments, security-conscious deployments, compliance requirements
 
 #### 📋 Detailed Permission Breakdown
 
@@ -548,6 +614,13 @@ Remote state provides:
 
 ## 🚀 Deployment Options
 
+**💡 Deployment Method Guide:**
+- **New deployments**: Use "Simplified Deployment" (recommended) - Terraform manages everything including S3
+- **Existing external S3 buckets**: Use "Legacy Deployment" - For deployments with pre-existing S3 buckets
+- **Learning/debugging**: Use "Manual Step-by-Step" - Understand each deployment phase
+
+---
+
 ### 🎯 Simplified Deployment (Recommended)
 
 The easiest way to deploy everything, including Terraform-managed S3 and automatic file uploads of sample city data needed for the knowledge base:
@@ -566,19 +639,27 @@ git clone https://github.com/dspenard/lambda-bedrock-kb-test.git && cd lambda-be
 
 This single command will:
 1. ✅ Initialize Terraform
-2. ✅ Create all infrastructure (Lambda, IAM, Bedrock Agent)
+2. ✅ Create all infrastructure (Lambda, IAM, Bedrock Agent, API Gateway, Cognito)
 3. ✅ Create S3 bucket with proper naming
 4. ✅ Upload knowledge base CSV files automatically
 5. ✅ Create OpenSearch Serverless collection
 6. ✅ Create Bedrock knowledge base with data sources
 7. ✅ Associate everything together
-8. ✅ Provide test commands for immediate use
+8. ✅ Deploy React frontend (if enabled - default)
+9. ✅ Provide test commands for immediate use
 
 **Total deployment time**: ~5-10 minutes
 
+**Frontend Deployment**: By default, the full-stack mode is enabled (`enable_frontend = true`), which deploys:
+- API Gateway REST API with Cognito authorization
+- Cognito User Pool for authentication
+- React frontend (runs locally on port 3000)
+
+To deploy backend-only (no frontend), set `enable_frontend = false` in `terraform.tfvars`.
+
 ### 🏷️ Resource Prefixing for Multi-Developer Environments
 
-This project supports optional 3-character prefixes to avoid resource name collisions:
+This project supports optional 3-character prefixes to avoid resource name collisions that can occur if multiple develpers are using the same AWS account:
 
 ```bash
 # Deploy with developer initials
@@ -680,7 +761,7 @@ This project uses several configuration files:
    knowledge_base_bucket_name = "bedrock-kb-xxxxxxxx"
    ```
 
-2. **`.kb-bucket-name`** - Backup reference file with S3 bucket name
+2. **`.kb-bucket-name`** - Backup reference file with S3 bucket name (legacy/external S3 deployments only)
 
 3. **`terraform.tfstate`** - **CRITICAL** - Contains your infrastructure state mapping
 

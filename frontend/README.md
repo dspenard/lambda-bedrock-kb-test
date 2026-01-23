@@ -24,7 +24,7 @@ React frontend for the Bedrock City Facts application with API Gateway integrati
 React App → API Gateway → Lambda Functions → AWS Bedrock
 ```
 
-- **Direct Lambda**: Calls Claude 3 Haiku directly via Bedrock
+- **Direct Lambda**: Calls Claude 3.5 Haiku directly via Bedrock
 - **Agent Lambda**: Uses Bedrock Agent with Knowledge Base access
 
 ## Getting Started
@@ -62,12 +62,14 @@ You can either:
 2. **Create via AWS CLI**:
 ```bash
 aws cognito-idp admin-create-user \
-  --user-pool-id us-east-1_WAdrmTPmf \
+  --user-pool-id <YOUR_USER_POOL_ID> \
   --username test@example.com \
   --user-attributes Name=email,Value=test@example.com Name=email_verified,Value=true \
   --temporary-password TempPass123! \
   --message-action SUPPRESS
 ```
+
+Get your User Pool ID with: `terraform output cognito_user_pool_id`
 
 ### Run Development Server
 

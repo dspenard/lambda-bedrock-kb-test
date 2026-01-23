@@ -44,7 +44,7 @@ User → React App → Cognito (Login) → JWT Token → API Gateway → Lambda
 ### Creating Users
 
 **Option 1: Self-signup (Recommended)**
-1. Open the React app at `http://localhost:3000`
+1. Open the React app at `http://localhost:3000` or another port if port 3000 is in use
 2. Click "Create Account"
 3. Enter email and password
 4. Check email for verification code
@@ -115,25 +115,30 @@ Expected response:
 - Email verification
 
 ⚠️ **Development-only settings:**
-- Callback URLs include `localhost:3000`
-- Deletion protection enabled (prevents accidental deletion)
+- Callback URLs include `localhost:3000` or another port if port 3000 is in use
+- Deletion protection set to INACTIVE (allows Terraform to destroy cleanly for testing)
 
 ### Production Recommendations
 
 When deploying to production:
 
-1. **Update callback URLs** in Cognito client:
+1. **Update callback URLs** in Cognito client to use your production domain:
    ```hcl
    callback_urls = ["https://yourdomain.com", "https://yourdomain.com/"]
    logout_urls   = ["https://yourdomain.com", "https://yourdomain.com/"]
    ```
 
-2. **Enable MFA** (Multi-Factor Authentication):
+2. **Enable deletion protection** to prevent accidental user pool deletion:
+   ```hcl
+   deletion_protection = "ACTIVE"
+   ```
+
+3. **Enable MFA** (Multi-Factor Authentication):
    ```hcl
    mfa_configuration = "OPTIONAL"  # or "ON" for required
    ```
 
-3. **Add custom domain** for Cognito hosted UI:
+4. **Add custom domain** for Cognito hosted UI:
    ```hcl
    resource "aws_cognito_user_pool_domain" "custom" {
      domain          = "auth.yourdomain.com"
@@ -142,12 +147,12 @@ When deploying to production:
    }
    ```
 
-4. **Enable advanced security features**:
+5. **Enable advanced security features**:
    - Compromised credentials check
    - Adaptive authentication
    - CloudWatch logging
 
-5. **Set up CloudWatch alarms**:
+6. **Set up CloudWatch alarms**:
    - Failed login attempts
    - Token validation failures
    - Unusual access patterns
